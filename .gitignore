@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+
+# Downloaded datasets (the notebook re-downloads them) and image caches
+data/raw/
+cache/
+
+# Node tooling for the slide generator
+tools/node_modules/
+tools/package-lock.json
+
+# Submission archive (build it locally, do not commit it)
+*.zip
+
+# Local run logs of the web app
+results/log_app.txt
+
+# Course brief (instructor material) and the internal planning proposal stay local
+Projects final.pdf
+Trash Sorting by Material Hand-Designed Features*.pdf
