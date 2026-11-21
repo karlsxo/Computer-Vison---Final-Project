@@ -26,6 +26,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import torch_common as tc   # noqa: E402  (probes CUDA before torch is imported)
+import numpy as np          # noqa: E402
 import torch                # noqa: E402
 import torch.nn as nn       # noqa: E402
 
@@ -95,7 +96,8 @@ def load_trained(path=MODELS_DIR / "scratch_cnn.pt"):
 @torch.no_grad()
 def predict_proba(model, img_uint8_hwc):
     """img: HxWx3 uint8 (any size) -> class probabilities."""
-    x = torch.from_numpy(img_uint8_hwc).permute(2, 0, 1).unsqueeze(0)
+    # np.array makes a writable copy (PIL-backed arrays are read-only -> PyTorch warning)
+    x = torch.from_numpy(np.array(img_uint8_hwc, dtype=np.uint8)).permute(2, 0, 1).unsqueeze(0)
     logits = tc.predict_logits(model, x, IMG_SIZE, MEAN, STD)
     return torch.softmax(logits, 1)[0].numpy()
 
