@@ -1,0 +1,4 @@
+method,trashnet_acc_before,trashnet_acc_after,realworld_acc_before,realworld_acc_after,realworld_clean_acc,realworld_macro_f1,threshold,answered_pct,answered_acc,runtime_ms_cpu,params_M,train_time_min
+HOG + linear SVM,52.93,47.87,9.33,47.83,43.70,0.4653,0.45,4.2,88.00,2.61,0.000,4.40
+4-block CNN (scratch),71.28,69.68,36.17,78.83,78.15,0.7823,0.95,20.8,98.40,17.60,1.128,186.36
+MobileNetV3-Large (pretrained),92.82,94.15,62.83,97.67,97.69,0.9766,0.65,94.0,99.47,37.56,4.210,101.79

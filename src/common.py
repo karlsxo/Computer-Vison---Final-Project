@@ -114,20 +114,26 @@ def resize_square(img: Image.Image, size: int) -> np.ndarray:
     return np.asarray(img.resize((size, size), Image.BILINEAR), dtype=np.uint8)
 
 
-def load_array_cache(items, size: int, tag: str) -> np.ndarray:
+def load_array_cache(items, size: int, tag: str, mmap: bool = False) -> np.ndarray:
     """Load all images of a list at a fixed size, caching to disk as uint8.
 
     Returns N x size x size x 3 uint8. The cache key includes the file list so a
-    changed split never silently reuses stale data.
+    changed split never silently reuses stale data. The cache is written image by
+    image into a memory-mapped file, and with mmap=True it is read back lazily
+    (pages are loaded from disk on demand), so large training sets fit in little RAM.
     """
     import hashlib
     key = hashlib.md5(("|".join(p for p, _ in items) + str(size)).encode()).hexdigest()[:10]
     f = CACHE_DIR / f"{tag}_{size}_{key}.npy"
-    if f.exists():
-        return np.load(f)
-    arr = np.stack([resize_square(load_rgb(p), size) for p, _ in items])
-    np.save(f, arr)
-    return arr
+    if not f.exists():
+        tmp = f.with_suffix(".partial.npy")
+        out = np.lib.format.open_memmap(tmp, mode="w+", dtype=np.uint8, shape=(len(items), size, size, 3))
+        for i, (p, _) in enumerate(items):
+            out[i] = resize_square(load_rgb(p), size)
+        out.flush()
+        del out
+        tmp.replace(f)
+    return np.load(f, mmap_mode="r") if mmap else np.load(f)
 
 
 def labels_of(items) -> np.ndarray:

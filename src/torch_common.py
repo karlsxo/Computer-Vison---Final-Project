@@ -48,9 +48,30 @@ IMAGENET_STD = (0.229, 0.224, 0.225)
 # =============================================================================
 # Data
 # =============================================================================
-def load_uint8(items, size: int, tag: str) -> torch.Tensor:
-    """N x 3 x size x size uint8 tensor on the CPU (cached as .npy on disk)."""
-    arr = load_array_cache(items, size, tag)
+class LazyImages:
+    """Images kept in a memory-mapped NHWC uint8 cache; indexing returns only the
+    requested images as an NCHW uint8 tensor. Lets large training sets train in
+    little RAM (the laptop had < 1 GB free)."""
+
+    def __init__(self, arr):
+        self.arr = arr
+
+    def __len__(self):
+        return len(self.arr)
+
+    def __getitem__(self, idx):
+        if isinstance(idx, torch.Tensor):
+            idx = idx.numpy()
+        batch = np.array(self.arr[idx], dtype=np.uint8, copy=True)   # writable, contiguous
+        return torch.from_numpy(batch).permute(0, 3, 1, 2)
+
+
+def load_uint8(items, size: int, tag: str, lazy: bool = False):
+    """N x 3 x size x size uint8 images on the CPU (cached as .npy on disk).
+    lazy=True returns a LazyImages view instead of loading everything into RAM."""
+    arr = load_array_cache(items, size, tag, mmap=lazy)
+    if lazy:
+        return LazyImages(arr)
     return torch.from_numpy(arr).permute(0, 3, 1, 2).contiguous()
 
 
@@ -166,8 +187,8 @@ def train_model(model, train_items, val_items, *, size, cache_size=None, mean, s
     # parameters trained in the "full" phase (default: all of them)
     trainable = list(param_groups) if param_groups is not None else list(model.parameters())
     head_params = list(head_params) if head_params is not None else None
-    xtr = load_uint8(train_items, cache_size, f"train_{tag}")
-    xva = load_uint8(val_items, cache_size, f"val_{tag}")
+    xtr = load_uint8(train_items, cache_size, f"train_{tag}", lazy=True)
+    xva = load_uint8(val_items, cache_size, f"val_{tag}", lazy=True)
     ytr = torch.tensor(labels_of(train_items))
     yva = labels_of(val_items)
     model = model.to(DEVICE)
