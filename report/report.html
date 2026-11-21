@@ -1,0 +1,297 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Trash Sorting Report</title>
+<style>
+@page { size: A4; margin: 18mm 17mm 18mm 17mm; }
+body { font-family: 'Segoe UI', Calibri, Arial, sans-serif; font-size: 10.3pt; line-height: 1.45; color: #1d2329; }
+h1 { font-size: 21pt; margin: 0 0 4px; color: #123b2f; line-height: 1.2; }
+h2 { font-size: 14pt; color: #123b2f; margin: 20px 0 6px; border-bottom: 1px solid #c9d6cf; padding-bottom: 3px; }
+h3 { font-size: 11.5pt; color: #1f5641; margin: 14px 0 4px; }
+.sub { color: #55606a; margin-bottom: 10px; }
+.abstract { background: #eef5f1; padding: 10px 14px; border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; margin: 8px 0 10px; font-size: 9.2pt; }
+th { background: #1f5641; color: white; text-align: left; padding: 4px 6px; }
+td { padding: 3px 6px; border-bottom: 1px solid #dfe5e1; vertical-align: top; }
+table.results td:nth-child(n+3) { text-align: right; }
+.ci { color: #6b7780; font-size: 8.4pt; }
+figure { margin: 8px 0 12px; page-break-inside: avoid; text-align: center; }
+figcaption { font-size: 8.8pt; color: #4a555e; margin-top: 3px; text-align: left; }
+code, pre { font-family: Consolas, monospace; font-size: 8.6pt; }
+pre { background: #f4f6f5; padding: 6px 9px; border-radius: 4px; white-space: pre; }
+.pb { page-break-before: always; }
+h2, h3 { break-after: avoid; page-break-after: avoid; }
+table, figure, pre, .key { break-inside: avoid; page-break-inside: avoid; }
+p { orphans: 3; widows: 3; }
+.key { background: #fff6e0; padding: 8px 12px; border-radius: 6px; }
+ol.refs li { margin-bottom: 3px; font-size: 9.3pt; }
+</style></head><body>
+<h1>Trash Sorting by Material: Hand-Designed Features vs. a Small CNN vs. a Pretrained Mobile Model</h1>
+<div class="sub">Computer Vision Group Project &middot; West Visayas State University &middot; Group __ &middot; Members: ____________________</div>
+<div class="abstract"><b>Abstract.</b> We compare three families of computer-vision methods on sorting a photo of one piece of trash into
+cardboard, glass, metal, paper, plastic or residual trash: a classical pipeline (HOG features and a linear SVM,
+both implemented from scratch in NumPy), a 4-block CNN designed and trained from scratch, and an ImageNet-pretrained
+MobileNetV3-Large fine-tuned on the same data. All methods use one leakage-safe split of TrashNet (duplicates and
+near-duplicates handled before splitting), identical metric code and an identical timing protocol. On the held-out
+test split the pretrained model reaches <b>92.8%</b> accuracy (macro-F1 0.926), the scratch CNN 71.3% and
+HOG + SVM 52.9%. On 600 unseen real-world web photos every method degrades, but the pretrained model keeps the
+most (62.8% vs. 36.2% and 9.3%). Pretraining also dominates when only 10 images per class are
+available. We built a web application that runs all three methods, draws their predictions on the photo and
+recommends MobileNetV3 by default.</div>
+
+<h2>1. Introduction</h2>
+<p>Segregating waste by material is the first step of recycling and is required at source by the Philippine
+Ecological Solid Waste Management Act (RA 9003), yet in barangay materials recovery facilities, schools and cleanup
+drives it is done by hand, slowly and inconsistently. A camera-based tool that names the material of an item could
+support these efforts. The problem is also a good test bed for computer vision: materials differ in colour, texture
+and shine, several pairs look alike (paper vs. cardboard, glass vs. clear plastic), and studio photos used for
+training look very different from real photos.</p>
+<p>This project asks which family of methods is best for the job: carefully hand-designed features, a small network
+learned from scratch on limited data, or a large network pretrained on ImageNet and adapted. We compare one method of
+each family on identical data, splits and metrics, including speed, size and training cost, and test how well each
+survives a shift from clean training photos to real-world photos.</p>
+<p><b>Objectives.</b> (1) choose and justify three well-matched methods; (2) implement HOG and the SVM ourselves and
+verify them with sanity checks; (3) design, train and validate our own CNN with learning curves and overfitting
+controls; (4) fine-tune a pretrained MobileNetV3 with correct preprocessing on the same split; (5) report top-1
+accuracy, macro-F1, confusion matrices, runtime, parameters and training time; (6) explain with evidence when and why
+each method succeeds or fails; (7) build an application that runs all three methods and recommends one.</p>
+<p><b>Research question.</b> <i>Which method best sorts trash by material, and does it still work on messy
+real-world photos after training on clean ones?</i> Sub-questions: (1) how much does each method gain or lose
+with only 10, 25 or 50 training images per class; (2) which materials does each method confuse, and why;
+(3) what does each method cost in runtime, parameters and training time; (4) which method should the
+application recommend by default?</p>
+
+<h2>2. Methods</h2>
+<h3>2.1 Data and a leakage-safe split</h3>
+<p><b>Sources.</b> TrashNet (Thung &amp; Yang, 2016: 2,527 photos of single items on a white/grey background,
+512&times;384) is the train/validation/test data. A second, independent dataset, the web-scraped 12-class
+<i>Garbage Classification</i> set (Kaggle), is used <i>only</i> as an unseen real-world test set: its three glass
+classes are mapped to glass, cardboard/paper/metal/plastic/trash keep their names, and battery, biological, clothes
+and shoes are excluded. 100 images per class were sampled with a fixed seed (600 images).</p>
+<p><b>Cleaning.</b> Exact duplicates were found by MD5: three files are byte-identical but stored under two classes
+(e.g. <code>glass176.jpg</code> = <code>plastic152.jpg</code>); since the true label is unknowable, all six copies were dropped.
+TrashNet also contains the same object photographed more than once, which would leak between train and test. A
+64-bit difference hash, our first attempt, was rejected: on the plain backgrounds it linked 1,053 pairs of
+<i>different-class</i> images. We instead compute a <i>detail signature</i> (64&times;64 grayscale minus a Gaussian blur,
+which removes the shared studio lighting, then zero-mean/unit-norm) and link pairs whose correlation exceeds 0.80, a
+threshold chosen by inspecting image pairs in several similarity bands. Linked images form groups (29 groups of &ge;2
+images); each group is assigned to a single split. A seeded, stratified, group-aware 70/15/15 split is saved to
+<code>splits/split.json</code> and loaded by every method. A self-check asserts that no validation or test image has a
+similarity above 0.80 to any training image (the maximum is 0.756). Finally, 490 of the sampled web images turned out to
+be copies of TrashNet photos (similarity 1.0) and were excluded from the real-world set.</p>
+<table class=""><thead><tr><th>class</th><th>train</th><th>val</th><th>test</th></tr></thead><tbody><tr><td>cardboard</td><td>282</td><td>61</td><td>60</td></tr><tr><td>glass</td><td>348</td><td>75</td><td>74</td></tr><tr><td>metal</td><td>286</td><td>61</td><td>61</td></tr><tr><td>paper</td><td>416</td><td>89</td><td>89</td></tr><tr><td>plastic</td><td>336</td><td>72</td><td>72</td></tr><tr><td>trash</td><td>96</td><td>21</td><td>20</td></tr><tr><td><b>total</b></td><td><b>1764</b></td><td><b>379</b></td><td><b>376</b></td></tr></tbody></table>
+<figure><img src="../results/figures/data_class_counts.png" style="width:70%"><figcaption>Figure 1. Class counts per split after cleaning. "trash" is the minority class (5 %).</figcaption></figure>
+<figure><img src="../results/figures/data_domain_examples.png" style="width:100%"><figcaption>Figure 2. The domain shift: TrashNet studio photos (top) vs. real-world web photos used only for testing (bottom).</figcaption></figure>
+
+<h3>2.2 Method A &mdash; HOG + linear SVM (classical, implemented from scratch)</h3>
+<p><b>HOG</b> (Dalal &amp; Triggs, 2005) is implemented in NumPy: BT.601 grayscale; gradients with the
+[&minus;1, 0, 1] kernel; magnitude and unsigned orientation (0&ndash;180&deg;); 8&times;8-pixel cells with 9-bin histograms
+weighted by magnitude, each vote split linearly between the two nearest bins; overlapping 2&times;2-cell blocks with
+L2-Hys normalisation (clip 0.2). A 128&times;128 image gives a 8,100-D descriptor in about 4 ms. HOG describes local edge
+orientation, i.e. shape, and deliberately discards colour and absolute intensity.</p>
+<p><b>Linear SVM</b>, also ours: one-vs-rest with all six classifiers optimised jointly, objective
+&lambda;/2&middot;&#8214;W&#8214;&sup2; + mean<sub>i</sub> &Sigma;<sub>k</sub> c<sub>i</sub>&middot;max(0, 1 &minus; t<sub>ik</sub>(x<sub>i</sub>&middot;w<sub>k</sub>+b<sub>k</sub>))&sup2;
+(the squared-hinge "L2-loss" SVM used by LIBLINEAR), class-balanced weights c<sub>i</sub>, standardised features, and our
+own full-batch Adam optimiser with cosine learning-rate decay (300 iterations). Profiling showed that mixing float32
+data with float64 weights made NumPy up-cast the data matrix on every product; keeping everything in float32 made each
+fit 12&times; faster. Cell size {8, 16}, soft/hard binning and &lambda; &isin; {1, 3, 10, 30, 100} were selected on the validation
+split (best: 8-px cells, soft binning, &lambda; = 30; the first grid's optimum lay on its edge, so it was extended).
+An extension that appends a 192-bin HSV colour histogram (our own RGB&rarr;HSV) is reported separately as a variant.</p>
+<p><b>Sanity checks</b> (all passed):</p>
+<table class=""><thead><tr><th>Check</th><th>Result</th></tr></thead><tbody><tr><td>(a) synthetic vertical bar / horizontal bar / 45&deg; edge</td><td>peak 0&ndash;20&deg; (pass) / peak 80&ndash;100&deg; (pass) / peak 40&ndash;60&deg; (pass)</td></tr><tr><td>(b) our HOG vs scikit-image hog() on 8 test images</td><td>max |diff| = 1.0e-07, correlation = 1.000000</td></tr><tr><td>(c) our SVM on a 3-class toy dataset</td><td>100% training accuracy</td></tr></tbody></table>
+<figure><img src="../results/figures/A_sanity_checks.png" style="width:100%"><figcaption>Figure 3. Sanity checks of Method A: orientation histograms of synthetic images peak at the expected angle; our SVM separates a toy dataset.</figcaption></figure>
+
+<h3>2.3 Method B &mdash; our 4-block CNN trained from scratch</h3>
+<pre>input 3x128x128
+Block 1  Conv3x3(3->32)    BN ReLU                            MaxPool -> 32x64x64
+Block 2  Conv3x3(32->64)   BN ReLU                            MaxPool -> 64x32x32
+Block 3  Conv3x3(64->128)  BN ReLU  Conv3x3(128->128) BN ReLU MaxPool -> 128x16x16
+Block 4  Conv3x3(128->256) BN ReLU  Conv3x3(256->256) BN ReLU MaxPool -> 256x8x8
+GlobalAvgPool -> Dropout(0.4) -> Linear(256->6)        1.13 M parameters</pre>
+<p>The network is our own design: four Conv-BN-ReLU-MaxPool blocks with 32/64/128/256 channels, a second
+convolution in blocks 3 and 4 (where it enlarges the receptive field cheaply on small feature maps; doubling every block
+would nearly double the compute: 209 vs. 124 s per CPU epoch), global average pooling, dropout 0.4 and a linear layer;
+1.13 M parameters with He initialisation. Training uses class-weighted cross-entropy with label smoothing, AdamW,
+warm-up plus cosine decay, batch 32 and our own per-image augmentation (one random affine warp combining zoom-crop,
+rotation and horizontal/vertical flips, then colour jitter, tint and random erasing). Early stopping on validation
+macro-F1 restores the best checkpoint.</p>
+<p><b>Over- vs. under-fitting.</b> A first run with full-strength augmentation, smoothing 0.1 and weight decay 0.05
+reached only 47% training and 53% validation accuracy after 15 epochs, both rising very slowly: it was
+<i>under</i>-fitting, so we stopped it. The final run uses augmentation strength 0.6 (zoom 70&ndash;100%, rotation &plusmn;15&deg;,
+jitter &plusmn;18%), smoothing 0.05, weight decay 0.02 and learning rate 3&middot;10<sup>&minus;3</sup> for 40 epochs; the best
+validation macro-F1 was reached at epoch 34. Validation accuracy was still creeping up at the end, so more epochs
+(affordable on a GPU) would probably help a little.</p>
+<figure><img src="../results/figures/data_augmentation.png" style="width:80%"><figcaption>Figure 4. Our training-time augmentation (shown at full strength; the final runs use strength 0.6).</figcaption></figure>
+
+<h3>2.4 Method C &mdash; MobileNetV3-Large, ImageNet-pretrained and fine-tuned</h3>
+<p>MobileNetV3-Large (Howard et al., 2019) with torchvision's <code>IMAGENET1K_V2</code> weights. The 1000-class
+output layer is replaced by a 6-class layer (same output format as A and B); inputs are 224&times;224 and normalised with
+the ImageNet mean and standard deviation the weights expect. Training has two stages: 3 epochs training only the
+classifier head with the backbone frozen (so the random head does not damage the pretrained features), then
+fine-tuning at learning rate 5&middot;10<sup>&minus;4</sup> (AdamW, cosine) for up to 12 epochs with early stopping
+(best epoch 9). The stem and the first three inverted-residual blocks stay frozen with their BatchNorm statistics
+fixed: they hold generic low-level filters and, operating at high resolution, dominate the cost (320 vs. 215 s per CPU
+epoch). The split, augmentation, loss and stopping rule are identical to Method B. We chose the Large variant over
+MobileNetV3-Small (proposed originally) for its higher accuracy; it is still a mobile network.</p>
+
+<h3>2.5 Evaluation protocol</h3>
+<p>Every method loads the same saved split and is scored by the same function (our own confusion
+matrix, accuracy, per-class precision/recall/F1 and macro-F1, averaged over the six classes so the small trash class
+counts equally). Hyper-parameters and checkpoints are selected on the validation split only; the test split is used
+once. Uncertainty is reported as 95% bootstrap confidence intervals (2,000 resamples of the test set) and pairs of
+methods are compared with the exact McNemar test on their discordant predictions. Runtime is measured on the same CPU
+(Intel i5-1135G7), batch size 1, after 10 warm-up passes, averaged over 200 test images, and includes HOG extraction for
+A and normalisation for B and C. Seeds are fixed and library versions are printed in the notebook. Because the laptop's
+NVIDIA driver was too old for the CUDA 12.6 runtime of the only PyTorch build for Python 3.14, all training ran on the
+CPU; the code automatically uses a GPU when one works (e.g. on Colab).</p>
+
+<h2>3. Experiments</h2>
+<ol>
+<li><b>Main comparison</b> &mdash; accuracy, macro-F1, confusion matrices and per-class precision/recall/F1 of the three
+methods (plus the colour variant) on the 376-image test split, with bootstrap CIs and McNemar tests.</li>
+<li><b>Domain shift</b> &mdash; the models trained on TrashNet are applied unchanged to the 600 real-world web photos.</li>
+<li><b>Small data</b> &mdash; every method is retrained on 10, 25 and 50 images per class (seeded subsamples of the
+training split) and scored on the same test split. A re-tunes &lambda;; B and C use a fixed number of optimisation steps.</li>
+<li><b>Efficiency</b> &mdash; runtime per image, parameter count, model size and training time on the same hardware,
+summarised in accuracy-versus-cost plots.</li>
+<li><b>Error analysis</b> &mdash; most-confused class pairs, failure examples, agreement between methods, a
+majority-vote ensemble, and visual explanations: HOG gradient maps and Grad-CAM (Selvaraju et al., 2017) for B and C.</li>
+</ol>
+
+<h2 class="pb">4. Results</h2>
+<h3>4.1 Experiment 1 &mdash; main comparison</h3>
+<table class="results"><thead><tr><th>Method</th><th>Slot</th><th>Top-1 acc. (%) [95% CI]</th><th>Macro F1</th><th>Runtime (ms/img, CPU)</th><th>Params (M)</th><th>Train time (min, CPU)</th></tr></thead><tbody><tr><td><b>HOG + linear SVM</b></td><td>A. Classical</td><td>52.9 <span class=ci>[47.6, 58.0]</span></td><td>0.519</td><td>3.6</td><td>0.00</td><td>0.3</td></tr><tr><td><b>4-block CNN (from scratch)</b></td><td>B. From scratch</td><td>71.3 <span class=ci>[66.5, 75.8]</span></td><td>0.694</td><td>16.8</td><td>1.13</td><td>100.8</td></tr><tr><td><b>MobileNetV3-Large (pretrained)</b></td><td>C. Pretrained</td><td>92.8 <span class=ci>[90.2, 95.2]</span></td><td>0.926</td><td>29.1</td><td>4.21</td><td>44.8</td></tr><tr><td><i>HOG + colour histogram + SVM (variant)</i></td><td>A. variant</td><td>59.6 <span class=ci>[54.8, 64.6]</span></td><td>0.587</td><td>13.6</td><td>0</td><td>0.5</td></tr></tbody></table>
+<p style="font-size:8.8pt;color:#4a555e">Runtime: batch size 1 on an Intel i5-1135G7 CPU, mean of 200 test images after 10 warm-up passes,
+including normalisation (and HOG extraction for A). Training times are CPU wall-clock times on the same laptop
+(the GPU could not be used, see the documentation).</p>
+<figure><img src="../results/figures/exp1_training_curves.png" style="width:100%"><figcaption>Figure 5. Training and validation curves of B (solid) and C (dashed); dotted lines mark the restored checkpoints (B: epoch 34, C: epoch 9). Right: convergence of our SVM objective.</figcaption></figure>
+<figure><img src="../results/figures/exp1_confusion_matrices.png" style="width:100%"><figcaption>Figure 6. Confusion matrices on the 376-image test split (rows = true class).</figcaption></figure>
+<table class=""><thead><tr><th>class</th><th>HOG + linear SVM<br><small>P / R / F1</small></th><th>4-block CNN (from scratch)<br><small>P / R / F1</small></th><th>MobileNetV3-Large (pretrained)<br><small>P / R / F1</small></th></tr></thead><tbody><tr><td>cardboard</td><td>0.50 / 0.60 / 0.55</td><td>0.94 / 0.83 / 0.88</td><td>0.98 / 0.92 / 0.95</td></tr><tr><td>glass</td><td>0.49 / 0.38 / 0.43</td><td>0.70 / 0.70 / 0.70</td><td>0.94 / 0.91 / 0.92</td></tr><tr><td>metal</td><td>0.45 / 0.49 / 0.47</td><td>0.69 / 0.72 / 0.70</td><td>0.88 / 0.98 / 0.93</td></tr><tr><td>paper</td><td>0.69 / 0.70 / 0.69</td><td>0.77 / 0.72 / 0.74</td><td>0.93 / 0.94 / 0.94</td></tr><tr><td>plastic</td><td>0.51 / 0.40 / 0.45</td><td>0.69 / 0.61 / 0.65</td><td>0.94 / 0.88 / 0.91</td></tr><tr><td>trash</td><td>0.42 / 0.70 / 0.53</td><td>0.37 / 0.70 / 0.48</td><td>0.83 / 1.00 / 0.91</td></tr></tbody></table>
+<figure><img src="../results/figures/exp1_per_class_f1.png" style="width:80%"><figcaption>Figure 7. Per-class F1 on the test split.</figcaption></figure>
+<table class=""><thead><tr><th>comparison</th><th>only 1st correct</th><th>only 2nd correct</th><th>exact McNemar p</th></tr></thead><tbody><tr><td>C vs B</td><td>91</td><td>10</td><td>1.7e-17</td></tr><tr><td>C vs A</td><td>156</td><td>6</td><td>8.1e-39</td></tr><tr><td>B vs A</td><td>107</td><td>38</td><td>8.6e-09</td></tr><tr><td>A+ vs A</td><td>49</td><td>24</td><td>4.6e-03</td></tr></tbody></table>
+<p>The ranking is clear and every pairwise difference is statistically significant (McNemar p &lt; 0.005):
+the pretrained MobileNetV3 reaches 92.8% accuracy and macro-F1 0.926, our scratch CNN 71.3% (0.694) and
+HOG + SVM 52.9% (0.519). The 95% intervals do not overlap. <b>Why.</b> HOG encodes only the layout of edge
+orientations. Material, however, is mostly a matter of colour, reflectance, transparency and fine texture, which HOG
+throws away, while shape is shared across materials (a bottle can be glass or plastic, a box cardboard or paper). Adding
+a colour histogram raises A to 59.6% (McNemar p = 0.005), which confirms that the missing colour information is a
+large part of A's weakness. The scratch CNN learns colour and texture filters itself, but 1,764 images are not enough
+to learn robust features from random weights. MobileNetV3 starts from features learned on 1.28 million ImageNet images,
+which already separate glossy from matte, transparent from opaque, printed from plain, so a small amount of trash data
+is enough to map them to materials. Its training curves show a small generalisation gap (training accuracy ~99%,
+validation ~97%), well controlled by early stopping.</p>
+
+<h3>4.2 Experiment 2 &mdash; domain shift</h3>
+<table class=""><thead><tr><th>Method</th><th>TrashNet test acc. (%)</th><th>Real-world acc. (%) [95% CI]</th><th>Real-world macro F1</th><th>Drop (points)</th><th>Accuracy retained</th></tr></thead><tbody><tr><td>HOG + linear SVM</td><td>52.9</td><td>9.3 <span class=ci>[6.8, 11.8]</span></td><td>0.084</td><td>43.6</td><td>18%</td></tr><tr><td>HOG + colour histogram + SVM (variant)</td><td>59.6</td><td>16.5 <span class=ci>[13.5, 19.3]</span></td><td>0.152</td><td>43.1</td><td>28%</td></tr><tr><td>4-block CNN (from scratch)</td><td>71.3</td><td>36.2 <span class=ci>[32.3, 40.2]</span></td><td>0.326</td><td>35.1</td><td>51%</td></tr><tr><td>MobileNetV3-Large (pretrained)</td><td>92.8</td><td>62.8 <span class=ci>[59.0, 66.7]</span></td><td>0.582</td><td>30.0</td><td>68%</td></tr></tbody></table>
+<figure><img src="../results/figures/exp2_domain_shift.png" style="width:100%"><figcaption>Figure 8. Accuracy on TrashNet test vs. unseen real-world web photos, and per-class F1 on the real-world set.</figcaption></figure>
+<figure><img src="../results/figures/exp2_confusion_realworld.png" style="width:100%"><figcaption>Figure 9. Confusion matrices on the 600 real-world photos.</figcaption></figure>
+<p>All methods lose accuracy on real-world photos, and the gap grows as the features become more
+hand-made: MobileNetV3 keeps 62.8% (68% of its test accuracy), the scratch CNN 36.2% (51%) and HOG + SVM collapses
+to 9.3%, below the 16.7% chance level (16.5% with colour). The confusion matrices show why A falls below
+chance: it labels most web photos <i>paper</i> and real paper <i>cardboard</i>, i.e. its decision rules encode TrashNet's
+edge statistics (one item, centred, on a blank table) rather than material. The scratch CNN also over-predicts paper and
+plastic, and Grad-CAM (Fig. 13) shows that it often attends to the background and shadows, cues that are specific to
+the studio set-up. MobileNetV3 attends to the object and transfers best: excluding the trash class its real-world
+accuracy is 74.8%. <b>No method recognises the web "trash" class</b> (F1 &le; 0.05): in TrashNet "trash" means food
+wrappers and packaging, whereas in the web set it is mostly diapers, toothbrushes and similar items. This is a change of
+<i>label definition</i>, not only of image style, and no classifier can learn it from the training data. Two lessons
+follow: test on data from the deployment setting, and fine-tune on local photos before real use.</p>
+
+<h3>4.3 Experiment 3 &mdash; small data</h3>
+<table class=""><thead><tr><th>Method</th><th>10 / class (60)</th><th>25 / class (150)</th><th>50 / class (300)</th><th>all (1764)</th></tr></thead><tbody><tr><td>HOG + linear SVM</td><td>36.7 / 0.36</td><td>35.4 / 0.36</td><td>41.0 / 0.41</td><td>52.9 / 0.52</td></tr><tr><td>4-block CNN (from scratch)</td><td>43.4 / 0.43</td><td>58.8 / 0.58</td><td>61.4 / 0.60</td><td>71.3 / 0.69</td></tr><tr><td>MobileNetV3-Large (pretrained)</td><td>67.6 / 0.66</td><td>75.5 / 0.73</td><td>83.8 / 0.82</td><td>92.8 / 0.93</td></tr></tbody></table>
+<p style="font-size:8.8pt;color:#4a555e">Cells: test accuracy (%) / macro F1.</p>
+<figure><img src="../results/figures/exp3_small_data.png" style="width:100%"><figcaption>Figure 10. Learning curves: test accuracy and macro F1 versus number of training images (log scale).</figcaption></figure>
+<p>With only 10 images per class (60 images) the pretrained model already reaches 67.6%, far above the
+scratch CNN (43.4%) and HOG + SVM (36.7%); at 50 images per class the values are 83.8%, 61.4% and
+41.0%. Strikingly, MobileNetV3 trained on only 10 images per class (67.6%) comes close to our scratch CNN trained on
+all 1,764 images (71.3%). This is the pattern transfer-learning theory predicts: the pretrained network only has
+to learn a 6-way read-out (plus small adjustments) on top of features that already exist, so its sample complexity is
+low. The scratch CNN must learn every filter from the data; it gains the most overall (from 43.4% to 71.3%) and its
+curve is still rising, so it is data-limited. HOG + SVM has no feature learning at all: it stays between 35% and 41% up
+to 50 images per class and reaches only 52.9% with all data, because its fixed features cap what any amount of
+data can teach the linear classifier.</p>
+
+<h3>4.4 Experiment 4 &mdash; efficiency</h3>
+<table class=""><thead><tr><th>Method</th><th>Acc. (%)</th><th>Runtime (ms/img, CPU)</th><th>Params (M)</th><th>Model file (MB)</th><th>Train time (min, CPU)</th></tr></thead><tbody><tr><td>HOG + linear SVM</td><td>52.9</td><td>3.6</td><td>0.00</td><td>0.3</td><td>0.3</td></tr><tr><td>HOG + colour hist. + SVM (variant)</td><td>59.6</td><td>13.6</td><td>0.00</td><td>0.3</td><td>0.5</td></tr><tr><td>4-block CNN (scratch)</td><td>71.3</td><td>16.8</td><td>1.13</td><td>4.5</td><td>100.8</td></tr><tr><td>MobileNetV3-Large (pretrained)</td><td>92.8</td><td>29.1</td><td>4.21</td><td>16.8</td><td>44.8</td></tr></tbody></table>
+<figure><img src="../results/figures/exp4_efficiency.png" style="width:100%"><figcaption>Figure 11. Accuracy versus inference cost (left) and training cost (right). Marker area grows with parameter count.</figcaption></figure>
+<p>HOG + SVM is by far the cheapest: 3.6 ms per image on the CPU, a 0.3 MB model and seconds of
+training, but its accuracy is the lowest. The scratch CNN needs 16.8 ms and 1.13 M parameters; MobileNetV3
+needs 29.1 ms and 4.21 M parameters (17 MB), still well within real-time on a laptop CPU (about 34 images per
+second) and designed for phones. Notably, the pretrained model trained in <i>less</i> time than the scratch CNN (it
+converges in a handful of epochs because it starts from good features), so pretraining reduces training cost as well
+as error. Per point of accuracy, the extra ~25 ms of MobileNetV3 is clearly worth it for this application.</p>
+
+<h3>4.5 Experiment 5 &mdash; error analysis</h3>
+<table class=""><thead><tr><th>Method</th><th>Most frequent confusions on the test split (true &rarr; predicted, count)</th></tr></thead><tbody><tr><td>HOG + linear SVM</td><td>glass&rarr;metal (15), plastic&rarr;cardboard (13), plastic&rarr;paper (10)</td></tr><tr><td>4-block CNN (from scratch)</td><td>plastic&rarr;glass (10), paper&rarr;trash (9), plastic&rarr;paper (8)</td></tr><tr><td>MobileNetV3-Large (pretrained)</td><td>cardboard&rarr;paper (5), plastic&rarr;glass (4), glass&rarr;metal (4)</td></tr></tbody></table>
+<figure><img src="../results/figures/exp5_failures.png" style="width:100%"><figcaption>Figure 12. Random failure cases of each method (true and predicted labels).</figcaption></figure>
+<figure><img src="../results/figures/exp5_gradcam.png" style="width:100%"><figcaption>Figure 13. What the methods look at: gradient magnitude used by HOG (A) and Grad-CAM heat maps of B and C on one test image per class.</figcaption></figure>
+<p>A's errors follow its blindness to colour and transparency: glass is read as metal (both are shiny with
+strong specular edges) and plastic as cardboard or paper. B's most frequent errors are plastic&rarr;glass (both
+transparent) and paper&rarr;trash/metal. C makes few errors, mainly cardboard&rarr;paper and plastic&harr;glass, the pairs that
+are hard even for people from one photo. On the test split all three methods are correct on 159 of 376 images
+and all wrong on only 13; C alone is right on 57, while C is wrong but A or B right on only
+14. A majority vote of the three (87.8%) is therefore <i>worse</i> than C alone: the weaker
+methods out-vote C more often than they rescue it. The Grad-CAM maps (Fig. 13) explain the domain-shift result: C's
+evidence lies on the object (bottle neck, can rim, the item itself), whereas B often relies on background regions.</p>
+
+<h3>4.6 Answer to the research question</h3>
+<div class="key"><p><b>Which method best sorts trash by material?</b> The pretrained MobileNetV3-Large: 92.8% test
+accuracy (macro-F1 0.926) versus 71.3% for our scratch CNN and 52.9% for HOG + SVM, significant in every pairwise
+test, best in the small-data regime, and fast enough for a phone (29 ms on a laptop CPU).</p>
+<p><b>Does it still work on messy real-world photos after training on clean ones?</b> Only partly. It keeps the most
+accuracy (62.8%, about 75% if the ill-defined trash class is excluded), while the scratch CNN (36.2%) and especially
+HOG + SVM (9.3%) largely fail. The ranking of the methods is the same in both settings, so the application
+recommends MobileNetV3 by default, but a deployment in Iloilo should fine-tune it on locally collected photos and define
+the "trash" class the same way as the local MRF does.</p></div>
+
+<h2>5. System</h2>
+<p>The comparison is wrapped in a Gradio web application (<code>app/app.py</code>, logic in
+<code>src/system.py</code>). <b>Input:</b> the user uploads a photo (or uses the webcam/clipboard). <b>Processing:</b> the
+image is resized for each method and all three run. <b>Output drawn on the input:</b> the recommended method's label and
+confidence in a band above the photo, and three coloured bars below it with each method's label, confidence and
+measured runtime, plus a table of all class probabilities. <b>Recommendation:</b> computed automatically from our result
+files: the method with the highest test macro-F1 is the default, and the explanation quotes its test accuracy, its
+real-world accuracy and its CPU runtime. The app also says whether the methods agree, warns when the confidence is below
+50% and asks for a retake on a plain background, and gives a disposal tip for the predicted material (RA 9003
+categories). It runs locally (<code>python app/app.py</code>) or from the Colab notebook with a public link.</p>
+<figure><img src="app_screenshot.png" style="width:72%"><figcaption>Figure 14. The Gradio application: the recommended method's label is drawn above the photo, with every method's label, confidence and runtime underneath, the measured reason for the recommendation and a disposal tip.</figcaption></figure>
+<figure><img src="../results/figures/system_demo.png" style="width:88%"><figcaption>Figure 15. The system on six new real-world web photos it has never seen (one per class). The recommended method is right on cardboard, metal and paper and wrong on glass, plastic and the web-style "trash" item, consistent with Experiment 2.</figcaption></figure>
+
+<h2>6. Conclusion and limitations</h2>
+<p>Learned features beat hand-designed ones for material recognition, and pretrained features beat
+features learned from scratch on a small dataset, by a wide and statistically significant margin on clean data, in the
+small-data regime and under domain shift. The classical pipeline remains valuable for what it teaches: it is
+transparent, tiny and fast, and its failures show exactly which visual cues (colour, transparency, texture) material
+recognition needs. Our careful data handling also mattered: identical files with conflicting labels, near-duplicate
+shots and 490 test images that were copies of training images would otherwise have inflated the results.</p>
+<p><b>Limitations.</b> TrashNet is small and studio-like; the real-world set comes from a different source with a
+different notion of "trash"; images are squashed to a square; all training ran on a laptop CPU, which limited the
+number of epochs for the scratch CNN; each configuration was trained with one seed (the bootstrap CIs capture test-set
+noise, not training noise); and the findings apply to these three methods, not to every method of each family.
+<b>Future work:</b> collect labelled phone photos from Iloilo (the code evaluates <code>data/own_photos/</code>
+automatically) and fine-tune on them; add test-time augmentation; detect several items per photo.</p>
+
+<h2>References</h2>
+<ol class="refs">
+<li>R. Szeliski, <i>Computer Vision: Algorithms and Applications</i>, 2nd ed., Springer, 2022.</li>
+<li>R. Krishna et al., <i>Computer Vision: Foundations and Applications</i> (Stanford CS131 notes), 2017.</li>
+<li>PyTorch and torchvision documentation, https://pytorch.org/vision/stable/models.html.</li>
+<li>N. Dalal and B. Triggs, &ldquo;Histograms of Oriented Gradients for Human Detection,&rdquo; CVPR, 2005.</li>
+<li>A. Howard et al., &ldquo;Searching for MobileNetV3,&rdquo; ICCV, 2019.</li>
+<li>G. Thung and M. Yang, &ldquo;Classification of Trash for Recyclability Status,&rdquo; CS229 project report, Stanford, 2016 (TrashNet, https://github.com/garythung/trashnet).</li>
+<li>M. Mohamed, &ldquo;Garbage Classification (12 classes),&rdquo; Kaggle dataset, 2021; mirror: https://huggingface.co/datasets/UdaraChamidu/Garbage-Classification-with-12-classes.</li>
+<li>R.-E. Fan, K.-W. Chang, C.-J. Hsieh, X.-R. Wang and C.-J. Lin, &ldquo;LIBLINEAR: A Library for Large Linear Classification,&rdquo; JMLR 9, 2008.</li>
+<li>D. P. Kingma and J. Ba, &ldquo;Adam: A Method for Stochastic Optimization,&rdquo; ICLR, 2015.</li>
+<li>I. Loshchilov and F. Hutter, &ldquo;Decoupled Weight Decay Regularization,&rdquo; ICLR, 2019.</li>
+<li>R. R. Selvaraju et al., &ldquo;Grad-CAM: Visual Explanations from Deep Networks via Gradient-based Localization,&rdquo; ICCV, 2017.</li>
+<li>K. He, X. Zhang, S. Ren and J. Sun, &ldquo;Delving Deep into Rectifiers,&rdquo; ICCV, 2015 (He initialisation).</li>
+<li>S. Ioffe and C. Szegedy, &ldquo;Batch Normalization,&rdquo; ICML, 2015.</li>
+<li>Republic Act No. 9003, Ecological Solid Waste Management Act of 2000, Philippines.</li>
+</ol>
+
+<h2>Contribution statement</h2>
+<p><i>(To be completed by the group: one paragraph listing what each member did.)</i> Suggested split:
+Member 1 &mdash; Method A (HOG, SVM, sanity checks); Member 2 &mdash; Method B (architecture, training, curves); Member 3
+&mdash; Method C (fine-tuning, preprocessing); Member 4 &mdash; data cleaning, split, real-world set, experiments 2&ndash;5;
+Member 5 &mdash; application, demo video, report and slides. Every member reviewed the others' code.</p>
+<p><b>Use of AI tools.</b> An AI coding assistant (Claude) was used to help write and debug code, run experiments,
+produce plots and draft the documentation, report and slides. All design decisions, results and text were reviewed by
+the group, and every member can explain every line of the code.</p>
+</body></html>
