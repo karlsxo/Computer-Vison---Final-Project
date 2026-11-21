@@ -24,17 +24,18 @@ p { orphans: 3; widows: 3; }
 ol.refs li { margin-bottom: 3px; font-size: 9.3pt; }
 </style></head><body>
 <h1>Trash Sorting by Material: Hand-Designed Features vs. a Small CNN vs. a Pretrained Mobile Model</h1>
-<div class="sub">Computer Vision Group Project &middot; West Visayas State University &middot; Group __ &middot; Members: ____________________</div>
-<div class="abstract"><b>Abstract.</b> We compare three families of computer-vision methods on sorting a photo of one piece of trash into
-cardboard, glass, metal, paper, plastic or residual trash: a classical pipeline (HOG features and a linear SVM,
-both implemented from scratch in NumPy), a 4-block CNN designed and trained from scratch, and an ImageNet-pretrained
-MobileNetV3-Large fine-tuned on the same data. All methods use one leakage-safe split of TrashNet (duplicates and
-near-duplicates handled before splitting), identical metric code and an identical timing protocol. On the held-out
-test split the pretrained model reaches <b>92.8%</b> accuracy (macro-F1 0.926), the scratch CNN 71.3% and
-HOG + SVM 52.9%. On 600 unseen real-world web photos every method degrades, but the pretrained model keeps the
-most (62.8% vs. 36.2% and 9.3%). Pretraining also dominates when only 10 images per class are
-available. We built a web application that runs all three methods, draws their predictions on the photo and
-recommends MobileNetV3 by default.</div>
+<div class="sub">Computer Vision Group Project &middot; West Visayas State University &middot; with <b>BIN</b>, a trash identification app &middot; Group __ &middot; Members: ____________________</div>
+<div class="abstract"><b>Abstract.</b> We compare three families of computer-vision methods on identifying the material of one piece of
+trash from a photo (cardboard, glass, metal, paper, plastic or residual trash): a classical pipeline (HOG features and a
+linear SVM, both implemented from scratch in NumPy), a 4-block CNN designed and trained from scratch, and an
+ImageNet-pretrained MobileNetV3-Large fine-tuned on the same data. All methods use one leakage-safe split of TrashNet,
+identical metric code and an identical timing protocol. On the held-out test split the pretrained model reaches
+<b>92.8%</b> accuracy (macro-F1 0.926), the scratch CNN 71.3% and HOG + SVM 52.9%. On 600 unseen
+real-world web photos every method degrades (62.8%, 36.2% and 9.3%), and pretraining also dominates when
+only 10 images per class are available. A sixth experiment retrains all three methods on TrashNet plus real-world web
+photos (test sets unchanged, near-duplicates removed): real-world accuracy rises to <b>97.7%</b>, 78.8% and
+47.8%. These models power <b>BIN</b>, a phone app that opens on the camera, runs all three methods on the phone,
+answers with MobileNetV3 or says "not sure", and gives the same predictions as the Python models on the test photos.</div>
 
 <h2>1. Introduction</h2>
 <p>Segregating waste by material is the first step of recycling and is required at source by the Philippine
@@ -153,6 +154,9 @@ training split) and scored on the same test split. A re-tunes &lambda;; B and C 
 summarised in accuracy-versus-cost plots.</li>
 <li><b>Error analysis</b> &mdash; most-confused class pairs, failure examples, agreement between methods, a
 majority-vote ensemble, and visual explanations: HOG gradient maps and Grad-CAM (Selvaraju et al., 2017) for B and C.</li>
+<li><b>Mixed-domain training</b> (added for the application) &mdash; every method is retrained with the same architecture
+and hyper-parameters on TrashNet + real-world web photos and evaluated on the <i>same</i> two test sets; a confidence
+threshold for "not sure" is calibrated on the validation split.</li>
 </ol>
 
 <h2 class="pb">4. Results</h2>
@@ -231,42 +235,90 @@ and all wrong on only 13; C alone is right on 57, while C is wrong but A or B ri
 methods out-vote C more often than they rescue it. The Grad-CAM maps (Fig. 13) explain the domain-shift result: C's
 evidence lies on the object (bottle neck, can rim, the item itself), whereas B often relies on background regions.</p>
 
-<h3>4.6 Answer to the research question</h3>
+<h3>4.6 Experiment 6 &mdash; mixed-domain training</h3>
+<p>Experiment 2 showed that the studio-trained models fail on real-world photos, and a phone app only ever sees
+real-world photos. We therefore added web photos from the 12-class dataset to TrashNet's training split
+(<code>src/prepare_mixed.py</code>) under strict leakage rules: none of the 600 real-world test photos is used, nor any web
+image whose detail signature correlates above 0.80 with one of them; no web image that is a near-copy of <i>any</i>
+TrashNet image is used (this removed almost all of TrashNet again: the web set contains it, so TrashNet test photos
+cannot leak); near-duplicates inside the web set stay together in train or validation. This gives
+3,419 training images (1,764 TrashNet + 1,655 web) and 240 extra validation images. Both test sets are
+unchanged. Because web datasets also contain the <i>same picture</i> cropped, mirrored or watermarked, which a pixel
+signature cannot catch, we ran a second check with ImageNet MobileNetV3 features (<code>tools/leakage_check.py</code>):
+real-world test photos whose nearest web-training photo has cosine similarity above 0.85 (a conservative cut chosen by
+inspecting pairs) are set aside, and accuracy is also reported on the remaining <i>clean subset</i>.</p>
+<table class=""><thead><tr><th>class</th><th>web candidates</th><th>near-copies of TrashNet (removed)</th><th>near-copies of test photos (removed)</th><th>usable</th><th>added to train</th><th>added to val</th></tr></thead><tbody><tr><td>cardboard</td><td>791</td><td>403</td><td>2</td><td>386</td><td>300</td><td>40</td></tr><tr><td>glass</td><td>1916</td><td>474</td><td>19</td><td>1424</td><td>300</td><td>40</td></tr><tr><td>metal</td><td>669</td><td>410</td><td>4</td><td>255</td><td>215</td><td>40</td></tr><tr><td>paper</td><td>950</td><td>594</td><td>0</td><td>356</td><td>300</td><td>40</td></tr><tr><td>plastic</td><td>765</td><td>477</td><td>8</td><td>280</td><td>240</td><td>40</td></tr><tr><td>trash</td><td>597</td><td>0</td><td>22</td><td>575</td><td>300</td><td>40</td></tr></tbody></table>
+<table class="results"><thead><tr><th>Method</th><th>TrashNet test acc. (%)<br><small>TrashNet-only &rarr; mixed</small></th><th>Real-world acc. (%) [95% CI]<br><small>TrashNet-only &rarr; mixed</small></th><th>Real-world macro-F1</th><th>'Not sure' threshold</th><th>Real-world answered / accuracy of answers</th><th>Train time (min, CPU)</th></tr></thead><tbody><tr><td>HOG + linear SVM</td><td>52.9 &rarr; <b>47.9</b></td><td>9.3 &rarr; <b>47.8</b> <span class=ci>[44.0, 51.5]</span></td><td>0.465</td><td>0.45</td><td>4% / 88.0%</td><td>4</td></tr><tr><td>4-block CNN (from scratch)</td><td>71.3 &rarr; <b>69.7</b></td><td>36.2 &rarr; <b>78.8</b> <span class=ci>[75.5, 82.2]</span></td><td>0.782</td><td>0.95</td><td>21% / 98.4%</td><td>186</td></tr><tr><td>&#9733; MobileNetV3-Large (pretrained)</td><td>92.8 &rarr; <b>94.1</b></td><td>62.8 &rarr; <b>97.7</b> <span class=ci>[96.3, 98.8]</span></td><td>0.977</td><td>0.65</td><td>94% / 99.5%</td><td>102</td></tr></tbody></table>
+<p style="font-size:8.8pt;color:#4a555e">Same test sets as Experiments 1 and 2. Arrows: model trained on TrashNet only &rarr; same method retrained
+on TrashNet + web photos with identical architecture and hyper-parameters. &#9733; = method BIN answers with (best real-world macro-F1).</p>
+<figure><img src="../results/figures/exp6_mixed_domain.png" style="width:100%"><figcaption>Figure 14. Experiment 6: accuracy before (grey) and after (colour) adding real-world photos to training, on both unchanged test sets.</figcaption></figure>
+<figure><img src="../results/figures/exp6_confusion_realworld.png" style="width:100%"><figcaption>Figure 15. Confusion matrices of the mixed-domain models on the 600 real-world test photos.</figcaption></figure>
+<figure><img src="../results/figures/exp6_confidence_threshold.png" style="width:62%"><figcaption>Figure 16. Calibrating the "not sure" threshold on the validation split: share of photos answered and accuracy of those answers.</figcaption></figure>
+<p>Adding real-world photos to training is by far the most effective change in this project. On the unchanged
+real-world test set, MobileNetV3 rises from 62.8% to <b>97.7%</b>, the scratch CNN from 36.2% to
+78.8% and HOG + SVM from 9.3% to 47.8%, while accuracy on the studio test photos changes little
+(MobileNetV3 92.8% &rarr; 94.1%, CNN 71.3% &rarr; 69.7%, HOG + SVM 52.9% &rarr; 47.9%).
+On the conservative clean subset (476 test photos without any near-duplicate in training) the accuracies are
+97.7% (MobileNetV3), 78.2% (CNN) and 43.7% (HOG + SVM), so the gain of the networks is not caused by
+leakage (<code>results/results_table_exp6.md</code>). <b>Why.</b> A classifier can only be as
+good as the match between its training and deployment images: with web photos in training, the networks no longer rely
+on the studio background, and the different meaning of "trash" in the web set (diapers, toothbrushes, masks) is learned
+from examples. The ranking of the methods does not change: the pretrained network adapts best, the scratch CNN profits
+from the doubled data but stays far behind, and HOG + SVM cannot represent the variety of real-world backgrounds with
+edge-orientation histograms. The "not sure" threshold of MobileNetV3-Large (pretrained) (65%) was chosen on validation as the lowest one
+whose answers are at least 98.5% correct (98.8%); on the real-world test set it answers 94% of the photos,
+and 99.5% of those answers are right; the rest get "not sure".</p>
+
+<h3>4.7 Answer to the research question</h3>
 <div class="key"><p><b>Which method best sorts trash by material?</b> The pretrained MobileNetV3-Large: 92.8% test
 accuracy (macro-F1 0.926) versus 71.3% for our scratch CNN and 52.9% for HOG + SVM, significant in every pairwise
 test, best in the small-data regime, and fast enough for a phone (29 ms on a laptop CPU).</p>
-<p><b>Does it still work on messy real-world photos after training on clean ones?</b> Only partly. It keeps the most
-accuracy (62.8%, about 75% if the ill-defined trash class is excluded), while the scratch CNN (36.2%) and especially
-HOG + SVM (9.3%) largely fail. The ranking of the methods is the same in both settings, so the application
-recommends MobileNetV3 by default, but a deployment in Iloilo should fine-tune it on locally collected photos and define
-the "trash" class the same way as the local MRF does.</p></div>
+<p><b>Does it still work on messy real-world photos after training on clean ones?</b> Not well enough: trained on studio
+photos only, it drops to 62.8% (and HOG + SVM to 9.3%, below chance). <b>Adding real-world photos to training
+fixes this</b> (Experiment 6): 97.7% on the same unseen real-world photos, with no loss on the studio photos. The
+ranking of the methods is the same in every setting, so BIN answers with MobileNetV3 trained on mixed data, and says
+"not sure" when its confidence is below 65%.</p></div>
 
-<h2>5. System</h2>
-<p>The comparison is wrapped in a Gradio web application (<code>app/app.py</code>, logic in
-<code>src/system.py</code>). <b>Input:</b> the user uploads a photo (or uses the webcam/clipboard). <b>Processing:</b> the
-image is resized for each method and all three run. <b>Output drawn on the input:</b> the recommended method's label and
-confidence in a band above the photo, and three coloured bars below it with each method's label, confidence and
-measured runtime, plus a table of all class probabilities. <b>Recommendation:</b> computed automatically from our result
-files: the method with the highest test macro-F1 is the default, and the explanation quotes its test accuracy, its
-real-world accuracy and its CPU runtime. The app also says whether the methods agree, warns when the confidence is below
-50% and asks for a retake on a plain background, and gives a disposal tip for the predicted material (RA 9003
-categories). It runs locally (<code>python app/app.py</code>) or from the Colab notebook with a public link.</p>
-<figure><img src="app_screenshot.png" style="width:72%"><figcaption>Figure 14. The Gradio application: the recommended method's label is drawn above the photo, with every method's label, confidence and runtime underneath, the measured reason for the recommendation and a disposal tip.</figcaption></figure>
-<figure><img src="../results/figures/system_demo.png" style="width:88%"><figcaption>Figure 15. The system on six new real-world web photos it has never seen (one per class). The recommended method is right on cardboard, metal and paper and wrong on glass, plastic and the web-style "trash" item, consistent with Experiment 2.</figcaption></figure>
+<h2 class="pb">5. System: BIN</h2>
+<p>The comparison is turned into <b>BIN</b>, an application whose logo is a trash can with a large B on its
+cover. The main version is a <b>phone app</b> (a Progressive Web App in <code>web/</code>, served at
+https://karlsxo.github.io/Computer-Vison---Final-Project/ and installable with <i>Add to Home Screen</i>); a desktop/Colab
+version uses Gradio (<code>app/app.py</code>, logic in <code>src/system.py</code>) with the same models and rules.</p>
+<p><b>Input:</b> BIN opens directly on a live camera view with a square scanner frame; the photo is cropped to the frame so
+the item fills the image like the training photos. The user can also choose a photo from the gallery, or use the phone's
+camera app when the live camera is not allowed. <b>Processing:</b> all three methods run <i>on the phone</i>: HOG + SVM in
+JavaScript (a line-by-line port of our NumPy code) and the two networks as ONNX models with onnxruntime-web
+(WebAssembly); Pillow's bilinear resize is re-implemented exactly so the networks see the same pixels as in Python.
+<b>Output drawn on the input:</b> the answer (or NOT SURE) over the photo, recyclable or residual, what to do with the
+item, and every method's label, confidence and runtime on the phone. <b>Recommendation:</b> BIN answers with the method
+that has the best macro-F1 on real-world photos (MobileNetV3-Large (pretrained)), explains why with the measured numbers, and says "not sure"
+below the calibrated threshold. The user can correct a wrong answer; scans are kept in a history on the phone. Photos
+never leave the device and the app works offline after the first visit (about 32 MB). <b>Verification:</b> the app's own
+code was run in a headless browser on all 976 test photos and compared with the Python models: the predictions agree on
+100% of them for both networks and on at least 99.8% for HOG + SVM (one real-world image decodes slightly
+differently in the browser); an emulated-phone test exercises every screen with a fake camera.</p>
+<figure><img src="bin_phone_screens.png" style="width:100%"><figcaption>Figure 17. The BIN phone app: it opens on the camera with a scanner frame; a result with what to do; a "not sure" answer; the scan history; the about page with the measured accuracy.</figcaption></figure>
+<table class=""><thead><tr><th>Test set</th><th>Method</th><th>Same prediction as Python</th><th>Accuracy in the app</th><th>Accuracy in Python</th></tr></thead><tbody><tr><td>TrashNet test (376)</td><td>HOG + linear SVM</td><td>100.0%</td><td>47.9%</td><td>47.9%</td></tr><tr><td>TrashNet test (376)</td><td>4-block CNN (from scratch)</td><td>100.0%</td><td>69.7%</td><td>69.7%</td></tr><tr><td>TrashNet test (376)</td><td>MobileNetV3-Large (pretrained)</td><td>100.0%</td><td>94.2%</td><td>94.2%</td></tr><tr><td>Real-world (600)</td><td>HOG + linear SVM</td><td>99.8%</td><td>47.8%</td><td>47.8%</td></tr><tr><td>Real-world (600)</td><td>4-block CNN (from scratch)</td><td>100.0%</td><td>78.8%</td><td>78.8%</td></tr><tr><td>Real-world (600)</td><td>MobileNetV3-Large (pretrained)</td><td>100.0%</td><td>97.7%</td><td>97.7%</td></tr></tbody></table>
+<p style="font-size:8.8pt;color:#4a555e">Phone-app check (tools/verify_web.py): every test photo classified by the app's own code (PIL-exact resize, JavaScript HOG + SVM, ONNX networks) in a headless browser and compared with the Python models.</p>
+<figure><img src="app_screenshot.png" style="width:72%"><figcaption>Figure 18. The desktop/Colab version of BIN (Gradio): BIN's answer is drawn above the photo, every method's label, confidence and runtime underneath, with the reason and what to do.</figcaption></figure>
+<figure><img src="../results/figures/system_demo.png" style="width:88%"><figcaption>Figure 19. BIN on six real-world web photos it has never seen (one per class); the green band shows its answer or NOT SURE.</figcaption></figure>
 
 <h2>6. Conclusion and limitations</h2>
 <p>Learned features beat hand-designed ones for material recognition, and pretrained features beat
 features learned from scratch on a small dataset, by a wide and statistically significant margin on clean data, in the
-small-data regime and under domain shift. The classical pipeline remains valuable for what it teaches: it is
-transparent, tiny and fast, and its failures show exactly which visual cues (colour, transparency, texture) material
-recognition needs. Our careful data handling also mattered: identical files with conflicting labels, near-duplicate
-shots and 490 test images that were copies of training images would otherwise have inflated the results.</p>
-<p><b>Limitations.</b> TrashNet is small and studio-like; the real-world set comes from a different source with a
-different notion of "trash"; images are squashed to a square; all training ran on a laptop CPU, which limited the
-number of epochs for the scratch CNN; each configuration was trained with one seed (the bootstrap CIs capture test-set
-noise, not training noise); and the findings apply to these three methods, not to every method of each family.
-<b>Future work:</b> collect labelled phone photos from Iloilo (the code evaluates <code>data/own_photos/</code>
-automatically) and fine-tune on them; add test-time augmentation; detect several items per photo.</p>
+small-data regime and under domain shift. The decisive factor for a working application, however, was the training
+data: once real-world photos were added (Experiment 6), the pretrained model went from 62.8% to 97.7% on unseen
+real-world photos, so BIN can be trusted on everyday pictures. The classical pipeline remains valuable for what it
+teaches: it is transparent, tiny and fast, and its failures show exactly which visual cues (colour, transparency,
+texture) material recognition needs. Careful data handling mattered throughout: identical files with conflicting
+labels, near-duplicate shots, 490 real-world images that were TrashNet copies, and cropped or watermarked copies between
+web training and test photos would otherwise have inflated the results.</p>
+<p><b>Limitations.</b> The real-world photos are web photos, not photos taken in Iloilo; "trash" is a vague class; images
+are squashed to a square; all training ran on a laptop CPU, which limited the epochs of the scratch CNN; each
+configuration was trained with one seed; and the findings apply to these three methods. BIN recognises only the six
+materials and one item per photo; anything else (food, batteries, several items) is outside its training.
+<b>Future work:</b> collect labelled phone photos in Iloilo (evaluated automatically from <code>data/own_photos/</code>) and
+fine-tune on them; add classes such as biodegradable and special waste; detect several items per photo.</p>
 
 <h2>References</h2>
 <ol class="refs">

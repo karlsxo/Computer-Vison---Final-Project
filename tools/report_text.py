@@ -2,16 +2,17 @@
 files by build_report.py, so the text always matches the measured results."""
 
 TEXT = {
-"abstract": """We compare three families of computer-vision methods on sorting a photo of one piece of trash into
-cardboard, glass, metal, paper, plastic or residual trash: a classical pipeline (HOG features and a linear SVM,
-both implemented from scratch in NumPy), a 4-block CNN designed and trained from scratch, and an ImageNet-pretrained
-MobileNetV3-Large fine-tuned on the same data. All methods use one leakage-safe split of TrashNet (duplicates and
-near-duplicates handled before splitting), identical metric code and an identical timing protocol. On the held-out
-test split the pretrained model reaches <b>{C_acc:.1f}%</b> accuracy (macro-F1 {C_f1:.3f}), the scratch CNN {B_acc:.1f}% and
-HOG + SVM {A_acc:.1f}%. On 600 unseen real-world web photos every method degrades, but the pretrained model keeps the
-most ({C_rw:.1f}% vs. {B_rw:.1f}% and {A_rw:.1f}%). Pretraining also dominates when only 10 images per class are
-available. We built a web application that runs all three methods, draws their predictions on the photo and
-recommends MobileNetV3 by default.""",
+"abstract": """We compare three families of computer-vision methods on identifying the material of one piece of
+trash from a photo (cardboard, glass, metal, paper, plastic or residual trash): a classical pipeline (HOG features and a
+linear SVM, both implemented from scratch in NumPy), a 4-block CNN designed and trained from scratch, and an
+ImageNet-pretrained MobileNetV3-Large fine-tuned on the same data. All methods use one leakage-safe split of TrashNet,
+identical metric code and an identical timing protocol. On the held-out test split the pretrained model reaches
+<b>{C_acc:.1f}%</b> accuracy (macro-F1 {C_f1:.3f}), the scratch CNN {B_acc:.1f}% and HOG + SVM {A_acc:.1f}%. On 600 unseen
+real-world web photos every method degrades ({C_rw:.1f}%, {B_rw:.1f}% and {A_rw:.1f}%), and pretraining also dominates when
+only 10 images per class are available. A sixth experiment retrains all three methods on TrashNet plus real-world web
+photos (test sets unchanged, near-duplicates removed): real-world accuracy rises to <b>{C6_rw:.1f}%</b>, {B6_rw:.1f}% and
+{A6_rw:.1f}%. These models power <b>BIN</b>, a phone app that opens on the camera, runs all three methods on the phone,
+answers with MobileNetV3 or says "not sure", and gives the same predictions as the Python models on the test photos.""",
 
 "intro": """<p>Segregating waste by material is the first step of recycling and is required at source by the Philippine
 Ecological Solid Waste Management Act (RA 9003), yet in barangay materials recovery facilities, schools and cleanup
@@ -105,6 +106,9 @@ training split) and scored on the same test split. A re-tunes &lambda;; B and C 
 summarised in accuracy-versus-cost plots.</li>
 <li><b>Error analysis</b> &mdash; most-confused class pairs, failure examples, agreement between methods, a
 majority-vote ensemble, and visual explanations: HOG gradient maps and Grad-CAM (Selvaraju et al., 2017) for B and C.</li>
+<li><b>Mixed-domain training</b> (added for the application) &mdash; every method is retrained with the same architecture
+and hyper-parameters on TrashNet + real-world web photos and evaluated on the <i>same</i> two test sets; a confidence
+threshold for "not sure" is calibrated on the validation split.</li>
 </ol>""",
 
 "res1": """<p>The ranking is clear and every pairwise difference is statistically significant (McNemar p &lt; 0.005):
@@ -157,37 +161,75 @@ and all wrong on only {all_wrong}; C alone is right on {only_C_correct}, while C
 methods out-vote C more often than they rescue it. The Grad-CAM maps (Fig. 13) explain the domain-shift result: C's
 evidence lies on the object (bottle neck, can rim, the item itself), whereas B often relies on background regions.</p>""",
 
+"data6": """<p>Experiment 2 showed that the studio-trained models fail on real-world photos, and a phone app only ever sees
+real-world photos. We therefore added web photos from the 12-class dataset to TrashNet's training split
+(<code>src/prepare_mixed.py</code>) under strict leakage rules: none of the 600 real-world test photos is used, nor any web
+image whose detail signature correlates above 0.80 with one of them; no web image that is a near-copy of <i>any</i>
+TrashNet image is used (this removed almost all of TrashNet again: the web set contains it, so TrashNet test photos
+cannot leak); near-duplicates inside the web set stay together in train or validation. This gives
+{n_mixed:,} training images (1,764 TrashNet + {n_web:,} web) and {n_webval} extra validation images. Both test sets are
+unchanged. Because web datasets also contain the <i>same picture</i> cropped, mirrored or watermarked, which a pixel
+signature cannot catch, we ran a second check with ImageNet MobileNetV3 features (<code>tools/leakage_check.py</code>):
+real-world test photos whose nearest web-training photo has cosine similarity above 0.85 (a conservative cut chosen by
+inspecting pairs) are set aside, and accuracy is also reported on the remaining <i>clean subset</i>.</p>""",
+
+"res6": """<p>Adding real-world photos to training is by far the most effective change in this project. On the unchanged
+real-world test set, MobileNetV3 rises from {C_rw:.1f}% to <b>{C6_rw:.1f}%</b>, the scratch CNN from {B_rw:.1f}% to
+{B6_rw:.1f}% and HOG + SVM from {A_rw:.1f}% to {A6_rw:.1f}%, while accuracy on the studio test photos changes little
+(MobileNetV3 {C_acc:.1f}% &rarr; {C6_tn:.1f}%, CNN {B_acc:.1f}% &rarr; {B6_tn:.1f}%, HOG + SVM {A_acc:.1f}% &rarr; {A6_tn:.1f}%).
+On the conservative clean subset ({n_clean} test photos without any near-duplicate in training) the accuracies are
+{C6_cl:.1f}% (MobileNetV3), {B6_cl:.1f}% (CNN) and {A6_cl:.1f}% (HOG + SVM), so the gain of the networks is not caused by
+leakage (<code>results/results_table_exp6.md</code>). <b>Why.</b> A classifier can only be as
+good as the match between its training and deployment images: with web photos in training, the networks no longer rely
+on the studio background, and the different meaning of "trash" in the web set (diapers, toothbrushes, masks) is learned
+from examples. The ranking of the methods does not change: the pretrained network adapts best, the scratch CNN profits
+from the doubled data but stays far behind, and HOG + SVM cannot represent the variety of real-world backgrounds with
+edge-orientation histograms. The "not sure" threshold of {rec6} ({thr6:.0f}%) was chosen on validation as the lowest one
+whose answers are at least 98.5% correct ({valsel6:.1f}%); on the real-world test set it answers {cov6:.0f}% of the photos,
+and {sel6:.1f}% of those answers are right; the rest get "not sure".</p>""",
+
 "answer": """<p><b>Which method best sorts trash by material?</b> The pretrained MobileNetV3-Large: {C_acc:.1f}% test
 accuracy (macro-F1 {C_f1:.3f}) versus {B_acc:.1f}% for our scratch CNN and {A_acc:.1f}% for HOG + SVM, significant in every pairwise
 test, best in the small-data regime, and fast enough for a phone ({C_ms:.0f} ms on a laptop CPU).</p>
-<p><b>Does it still work on messy real-world photos after training on clean ones?</b> Only partly. It keeps the most
-accuracy ({C_rw:.1f}%, about 75% if the ill-defined trash class is excluded), while the scratch CNN ({B_rw:.1f}%) and especially
-HOG + SVM ({A_rw:.1f}%) largely fail. The ranking of the methods is the same in both settings, so the application
-recommends MobileNetV3 by default, but a deployment in Iloilo should fine-tune it on locally collected photos and define
-the "trash" class the same way as the local MRF does.</p>""",
+<p><b>Does it still work on messy real-world photos after training on clean ones?</b> Not well enough: trained on studio
+photos only, it drops to {C_rw:.1f}% (and HOG + SVM to {A_rw:.1f}%, below chance). <b>Adding real-world photos to training
+fixes this</b> (Experiment 6): {C6_rw:.1f}% on the same unseen real-world photos, with no loss on the studio photos. The
+ranking of the methods is the same in every setting, so BIN answers with MobileNetV3 trained on mixed data, and says
+"not sure" when its confidence is below {thr6:.0f}%.</p>""",
 
-"system": """<p>The comparison is wrapped in a Gradio web application (<code>app/app.py</code>, logic in
-<code>src/system.py</code>). <b>Input:</b> the user uploads a photo (or uses the webcam/clipboard). <b>Processing:</b> the
-image is resized for each method and all three run. <b>Output drawn on the input:</b> the recommended method's label and
-confidence in a band above the photo, and three coloured bars below it with each method's label, confidence and
-measured runtime, plus a table of all class probabilities. <b>Recommendation:</b> computed automatically from our result
-files: the method with the highest test macro-F1 is the default, and the explanation quotes its test accuracy, its
-real-world accuracy and its CPU runtime. The app also says whether the methods agree, warns when the confidence is below
-50% and asks for a retake on a plain background, and gives a disposal tip for the predicted material (RA 9003
-categories). It runs locally (<code>python app/app.py</code>) or from the Colab notebook with a public link.</p>""",
+"system": """<p>The comparison is turned into <b>BIN</b>, an application whose logo is a trash can with a large B on its
+cover. The main version is a <b>phone app</b> (a Progressive Web App in <code>web/</code>, served at
+https://karlsxo.github.io/Computer-Vison---Final-Project/ and installable with <i>Add to Home Screen</i>); a desktop/Colab
+version uses Gradio (<code>app/app.py</code>, logic in <code>src/system.py</code>) with the same models and rules.</p>
+<p><b>Input:</b> BIN opens directly on a live camera view with a square scanner frame; the photo is cropped to the frame so
+the item fills the image like the training photos. The user can also choose a photo from the gallery, or use the phone's
+camera app when the live camera is not allowed. <b>Processing:</b> all three methods run <i>on the phone</i>: HOG + SVM in
+JavaScript (a line-by-line port of our NumPy code) and the two networks as ONNX models with onnxruntime-web
+(WebAssembly); Pillow's bilinear resize is re-implemented exactly so the networks see the same pixels as in Python.
+<b>Output drawn on the input:</b> the answer (or NOT SURE) over the photo, recyclable or residual, what to do with the
+item, and every method's label, confidence and runtime on the phone. <b>Recommendation:</b> BIN answers with the method
+that has the best macro-F1 on real-world photos ({rec6}), explains why with the measured numbers, and says "not sure"
+below the calibrated threshold. The user can correct a wrong answer; scans are kept in a history on the phone. Photos
+never leave the device and the app works offline after the first visit (about 32 MB). <b>Verification:</b> the app's own
+code was run in a headless browser on all 976 test photos and compared with the Python models: the predictions agree on
+100% of them for both networks and on at least {wv_min:.1f}% for HOG + SVM (one real-world image decodes slightly
+differently in the browser); an emulated-phone test exercises every screen with a fake camera.</p>""",
 
 "conclusion": """<p>Learned features beat hand-designed ones for material recognition, and pretrained features beat
 features learned from scratch on a small dataset, by a wide and statistically significant margin on clean data, in the
-small-data regime and under domain shift. The classical pipeline remains valuable for what it teaches: it is
-transparent, tiny and fast, and its failures show exactly which visual cues (colour, transparency, texture) material
-recognition needs. Our careful data handling also mattered: identical files with conflicting labels, near-duplicate
-shots and 490 test images that were copies of training images would otherwise have inflated the results.</p>
-<p><b>Limitations.</b> TrashNet is small and studio-like; the real-world set comes from a different source with a
-different notion of "trash"; images are squashed to a square; all training ran on a laptop CPU, which limited the
-number of epochs for the scratch CNN; each configuration was trained with one seed (the bootstrap CIs capture test-set
-noise, not training noise); and the findings apply to these three methods, not to every method of each family.
-<b>Future work:</b> collect labelled phone photos from Iloilo (the code evaluates <code>data/own_photos/</code>
-automatically) and fine-tune on them; add test-time augmentation; detect several items per photo.</p>""",
+small-data regime and under domain shift. The decisive factor for a working application, however, was the training
+data: once real-world photos were added (Experiment 6), the pretrained model went from {C_rw:.1f}% to {C6_rw:.1f}% on unseen
+real-world photos, so BIN can be trusted on everyday pictures. The classical pipeline remains valuable for what it
+teaches: it is transparent, tiny and fast, and its failures show exactly which visual cues (colour, transparency,
+texture) material recognition needs. Careful data handling mattered throughout: identical files with conflicting
+labels, near-duplicate shots, 490 real-world images that were TrashNet copies, and cropped or watermarked copies between
+web training and test photos would otherwise have inflated the results.</p>
+<p><b>Limitations.</b> The real-world photos are web photos, not photos taken in Iloilo; "trash" is a vague class; images
+are squashed to a square; all training ran on a laptop CPU, which limited the epochs of the scratch CNN; each
+configuration was trained with one seed; and the findings apply to these three methods. BIN recognises only the six
+materials and one item per photo; anything else (food, batteries, several items) is outside its training.
+<b>Future work:</b> collect labelled phone photos in Iloilo (evaluated automatically from <code>data/own_photos/</code>) and
+fine-tune on them; add classes such as biodegradable and special waste; detect several items per photo.</p>""",
 
 "contrib": """<p><i>(To be completed by the group: one paragraph listing what each member did.)</i> Suggested split:
 Member 1 &mdash; Method A (HOG, SVM, sanity checks); Member 2 &mdash; Method B (architecture, training, curves); Member 3

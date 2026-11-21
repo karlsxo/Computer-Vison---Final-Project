@@ -1,4 +1,6 @@
-# Trash Sorting by Material — HOG + SVM vs. a Small CNN vs. a Pretrained MobileNetV3
+<img src="web/icons/logo.svg" alt="BIN logo" width="96" align="right">
+
+# Trash Sorting by Material — HOG + SVM vs. a Small CNN vs. a Pretrained MobileNetV3, and the BIN app
 
 Computer Vision Group Project, West Visayas State University.
 
@@ -10,8 +12,8 @@ plastic or residual trash — and does it still work on messy real-world photos 
 studio ones?**
 
 We compare one method from each family on **the same data, the same saved split, the same metric code
-and the same timing protocol**, run five experiments, and wrap the result in a web app that runs all
-three methods on a new photo and recommends the best one.
+and the same timing protocol**, run six experiments, and turn the result into **BIN**, a phone app that
+identifies a piece of trash from a photo.
 
 | Slot | Method | File |
 |---|---|---|
@@ -19,10 +21,27 @@ three methods on a new photo and recommends the best one.
 | B. Trained from scratch | Our 4-block CNN (PyTorch, random init) | `src/scratch_cnn.py` |
 | C. Pretrained, modern | MobileNetV3-Large (ImageNet, torchvision), fine-tuned | `src/pretrained_mobilenet.py` |
 
+## 📱 BIN — open it on your phone
+
+**<https://karlsxo.github.io/Computer-Vison---Final-Project/>** → allow the camera → *Add to Home Screen*.
+
+BIN **opens straight to the camera**: put one piece of trash in the frame and tap *Identify* (or pick a
+photo from the gallery). All three methods run **on the phone** (no server; photos never leave the
+device; works offline after the first visit). BIN answers with the best method — MobileNetV3, the most
+accurate on real-world photos — or says **"Not sure"** when its confidence is below the calibrated
+threshold, shows whether the item is *recyclable* or *residual* and what to do with it, and lists every
+method's prediction, confidence and runtime. A wrong answer can be corrected; scans are kept in a history.
+
+* The app is in [`web/`](web): HOG + SVM is ported to JavaScript (`web/js/hog.js`); the CNN and
+  MobileNetV3 run as ONNX models with onnxruntime-web; `web/js/imaging.js` reproduces Pillow's resize
+  exactly. **Verified:** on all 976 test photos the app gives the same predictions as the Python models
+  (100 % for both networks, ≥ 99.8 % for HOG + SVM) — `tools/verify_web.py`, `results/web_verification.json`.
+* Desktop / Colab version with the same models and rules: `python app/app.py` (Gradio).
+
 ## Results
 
-TrashNet test split (376 images), real-world set = 600 unseen web photos. Runtime: laptop CPU
-(Intel i5-1135G7), batch size 1. Training was done on the CPU.
+**Experiments 1–5** — trained on TrashNet only. TrashNet test split (376 images); real-world set = 600
+unseen web photos. Runtime: laptop CPU (Intel i5-1135G7), batch size 1. All training was done on the CPU.
 
 | Method | Test accuracy [95% CI] | Macro-F1 | Real-world accuracy | ms / image | Params | Train time |
 |---|---|---|---|---|---|---|
@@ -34,62 +53,58 @@ TrashNet test split (376 images), real-world set = 600 unseen web photos. Runtim
 Small data (test accuracy with 10 / 25 / 50 images per class): A 36.7 / 35.4 / 41.0 %,
 B 43.4 / 58.8 / 61.4 %, C 67.6 / 75.5 / 83.8 %.
 
-**Answer.** The pretrained MobileNetV3 is best on clean photos, with little data and on real-world
-photos, and all pairwise differences are significant (McNemar p < 0.005). Every method degrades on
-real-world photos; HOG + SVM falls below chance and Grad-CAM shows the scratch CNN relying on
-background cues. No method recognises the web set's "trash" class, whose definition differs from
-TrashNet's — before deployment the model should be fine-tuned on local photos.
+**Experiment 6** — the same methods retrained on TrashNet + real-world web photos (test sets unchanged,
+near-duplicates of test photos removed; these are the models in BIN):
 
-![Domain shift](results/figures/exp2_domain_shift.png)
-![The application](report/app_screenshot.png)
+| Method | TrashNet test | Real-world test | Real-world, clean subset* |
+|---|---|---|---|
+| A. HOG + linear SVM | 52.9 → 47.9 % | 9.3 → 47.8 % | 43.7 % |
+| B. 4-block CNN | 71.3 → 69.7 % | 36.2 → 78.8 % | 78.2 % |
+| **C. MobileNetV3-Large** | 92.8 → **94.1 %** | 62.8 → **97.7 %** | **97.7 %** |
 
-**Documents:** full process documentation in **[docs/DOCUMENTATION.md](docs/DOCUMENTATION.md)** ·
+\*476 real-world test photos without any near-duplicate (crop/watermark copy) in training. With its "not sure"
+threshold (0.65), BIN answers 94 % of the real-world test photos and 99.5 % of those answers are correct.
+
+**Answer.** The pretrained MobileNetV3 is best on clean photos, with little data and on real-world photos
+(all pairwise differences significant, McNemar p < 0.005). Trained on studio photos only, every method
+degrades badly on real-world photos (HOG + SVM falls below chance; Grad-CAM shows the scratch CNN relying on
+the background). Adding real-world photos to training fixes most of the gap: 97.7 % for MobileNetV3.
+
+![Experiment 6](results/figures/exp6_mixed_domain.png)
+![BIN phone app](report/bin_phone_screens.png)
+
+**Documents:** full process documentation **[docs/DOCUMENTATION.md](docs/DOCUMENTATION.md)** ·
 report [report/Trash_Sorting_Report.pdf](report/Trash_Sorting_Report.pdf) ·
 slides [report/Trash_Sorting_Slides.pptx](report/Trash_Sorting_Slides.pptx) ·
+proposal form [report/Proposal_Form.pdf](report/Proposal_Form.pdf) ·
 executed notebook [notebooks/CV_Project.ipynb](notebooks/CV_Project.ipynb) ·
-table [results/results_table.md](results/results_table.md).
+tables [results/results_table.md](results/results_table.md), [results/results_table_exp6.md](results/results_table_exp6.md).
 
-## 📱 Phone app
-
-**Open on your phone: <https://karlsxo.github.io/Computer-Vison---Final-Project/>** (then *Add to Home Screen* to install it like an app).
-
-Take a photo with the camera (live scanner frame) or upload one from the gallery. All three methods
-classify it **on the phone itself** (no server, photos never leave the device, works offline after the
-first visit): the app shows the material, whether it is *recyclable* or *residual*, what each method
-predicted with its confidence and runtime, the recommended method with the reason, and a disposal tip.
-Sorted items earn points and levels, and are shown in a stats donut; a Learn section has material guides
-and short articles.
-
-* Method A (HOG + SVM) is ported to JavaScript (`web/js/hog.js`); methods B and C run as ONNX models with
-  onnxruntime-web (`tools/export_mobile.py` exports them with the normalisation built in).
-* `web/js/imaging.js` re-implements Pillow's bilinear resize exactly, so the phone feeds the networks the
-  same pixels as Python. **Verified:** on all 376 test images the phone app agrees 100% with the Python
-  models for all three methods (`tools/verify_web.py`, `results/web_verification.json`).
-* Source: [`web/`](web). Run locally: `python -m http.server 8000 --directory web`.
-
-
+## Folder layout
 
 ```
 src/
   common.py               paths, class list, saved-split loader, metric code, timing protocol (shared)
   prepare_data.py         duplicate removal, group-aware stratified split, real-world test set
   hog_svm.py              Method A (+ sanity checks, + colour-histogram variant)
-  torch_common.py         shared PyTorch training loop, GPU/CPU augmentation, evaluation, timing
+  torch_common.py         shared PyTorch training loop, augmentation, low-memory loading, evaluation, timing
   scratch_cnn.py          Method B
   pretrained_mobilenet.py Method C
-  experiments.py          Experiments 1-5 and all figures
-  system.py               inference + annotation + recommendation logic used by the app
-app/app.py                Gradio web app (upload image -> 3 predictions drawn on it + recommendation)
+  experiments.py          Experiments 1-5 and their figures
+  prepare_mixed.py        Experiment 6 data: TrashNet + web photos, leakage-checked
+  mixed_domain.py         Experiment 6: retrain all methods on mixed data, "not sure" threshold
+  system.py               BIN logic (desktop): all three methods, answer / not sure, annotation
+web/                      BIN phone app (HTML/CSS/JS, ONNX models, service worker, logo)
+app/app.py                BIN desktop/Colab app (Gradio)
 notebooks/CV_Project.ipynb  the executed, top-to-bottom notebook (Colab-ready)
-splits/split.json         THE split used by every method (relative paths + labels)
-splits/realworld.json     domain-shift test set (never used for training)
-models/                   trained weights (hog_svm.npz, hog_color_svm.npz, scratch_cnn.pt, mobilenetv3_large.pt)
-results/                  JSON results per method/experiment, results_table.md/.csv, logs, figures/
-report/                   PDF report, slides, contribution statement
+splits/                   split.json (THE split), realworld.json (test only), mixed.json (Experiment 6)
+models/                   trained weights; models/mixed/ = Experiment 6 models used by BIN
+results/                  JSON results, tables, logs, figures/, phone_screens/
+report/                   PDF report, slides, proposal form, contribution statement
 docs/DOCUMENTATION.md     detailed documentation of every step and decision
-tools/                    generators for the notebook, report and slides
+tools/                    export to the phone, phone-app checks, leakage check, notebook/report/slide generators
 data/raw/                 downloaded datasets (not committed; the notebook downloads them)
-data/own_photos/<class>/  OPTIONAL: put your own phone photos here; they are evaluated automatically
+data/own_photos/<class>/  OPTIONAL: your own phone photos; evaluated automatically
 ```
 
 ## How to run
@@ -104,23 +119,29 @@ python src/hog_svm.py               # Method A  (~5 min CPU)
 python src/scratch_cnn.py           # Method B  (~1.5 h CPU, ~5 min GPU)
 python src/pretrained_mobilenet.py  # Method C  (~1 h CPU, ~5 min GPU)
 python src/experiments.py           # Experiments 1-5 + figures
-python app/app.py                   # web app at http://127.0.0.1:7860
+python src/prepare_mixed.py         # Experiment 6 data
+python src/mixed_domain.py          # Experiment 6 (~5 h CPU, ~20 min GPU)
+python tools/export_mobile.py       # put the Experiment 6 models into the phone app (web/)
+python tools/verify_web.py          # check the phone app against Python (needs: pip install playwright)
+python app/app.py                   # BIN desktop app at http://127.0.0.1:7860
+python -m http.server 8000 --directory web   # BIN phone app locally at http://127.0.0.1:8000
 ```
 
 **Google Colab:** open
 <https://colab.research.google.com/github/karlsxo/Computer-Vison---Final-Project/blob/main/notebooks/CV_Project.ipynb>,
 select a GPU runtime and *Run all* (the first cell clones this repository). The notebook downloads both
-datasets and re-uses the committed split and trained models; set `RETRAIN = True` to retrain everything
-on the Colab GPU (about 35 minutes).
+datasets and re-uses the committed splits and trained models; set `RETRAIN = True` to retrain everything
+on the Colab GPU (about one hour).
 
 ## Datasets
 * **TrashNet** — G. Thung and M. Yang, Stanford, 2016. <https://github.com/garythung/trashnet> (2,527 images, 6 classes).
 * **Garbage Classification (12 classes)** — Kaggle (M. Mohamed), mirrored at
-  <https://huggingface.co/datasets/UdaraChamidu/Garbage-Classification-with-12-classes>; used **only**
-  as an unseen real-world test set (100 images per mapped class).
+  <https://huggingface.co/datasets/UdaraChamidu/Garbage-Classification-with-12-classes>; 600 images form the
+  unseen real-world test set; other images (never near-copies of test photos) are added to training in Experiment 6.
 
 ## Troubleshooting
 * **Slow start (~30 s) on a laptop whose NVIDIA driver is older than the CUDA runtime:** the code
   probes the GPU once at start-up and falls back to the CPU if it fails. Skip the probe with
   `CUDA_VISIBLE_DEVICES=-1` (PowerShell: `$env:CUDA_VISIBLE_DEVICES="-1"`).
 * **Notebook kernel cannot import torch:** run Jupyter from the project's virtual environment.
+* **The phone app shows an old version:** close and reopen it; BIN updates itself after the first launch.

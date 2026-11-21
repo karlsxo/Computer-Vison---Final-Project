@@ -31,9 +31,13 @@ def J(name):
 e1, e2, e3, e4, e5 = (J("exp1_main.json"), J("exp2_domain_shift.json"), J("exp3_small_data.json"),
                       J("exp4_efficiency.json"), J("exp5_error_analysis.json"))
 rA, rB, rC = J("method_A.json"), J("method_B.json"), J("method_C.json")
+e6, WV, LK = J("exp6_mixed_domain.json"), J("web_verification.json"), J("exp6_leakage_check.json")
+mixed = json.loads((ROOT / "splits" / "mixed.json").read_text())
 split = json.loads((ROOT / "splits" / "split.json").read_text())
 M = e1["methods"]
 RW = e2["results"]["realworld"]
+M6 = e6["methods"]
+REC6 = max("ABC", key=lambda k: M6[k]["realworld"]["macro_f1"])   # the method BIN answers with
 
 
 def fig(name, caption, width="100%"):
@@ -118,6 +122,28 @@ sanity_table = table(["Check", "Result"], [
      f"max |diff| = {sc['skimage_reference']['max_abs_diff']:.1e}, correlation = {sc['skimage_reference']['min_correlation']:.6f}"],
     ["(c) our SVM on a 3-class toy dataset", f"{sc['toy_svm']['train_accuracy']:.0f}% training accuracy"]])
 
+mix_rows = [[c, s["candidates"], s["near_trashnet"], s["near_realworld_test"], s["usable"], s["web_train"], s["web_val"]]
+            for c, s in mixed["stats"]["per_class"].items()]
+mix_table = table(["class", "web candidates", "near-copies of TrashNet (removed)", "near-copies of test photos (removed)",
+                   "usable", "added to train", "added to val"], mix_rows)
+e6_rows = []
+for k in "ABC":
+    m, b = M6[k], M6[k]["baseline_trashnet_only"]
+    e6_rows.append([("&#9733; " if k == REC6 else "") + NAMES[k],
+                    f"{b['trashnet_test_acc']:.1f} &rarr; <b>{m['trashnet_test']['accuracy']:.1f}</b>",
+                    f"{b['realworld_acc']:.1f} &rarr; <b>{m['realworld']['accuracy']:.1f}</b> <span class=ci>[{m['realworld']['acc_ci95'][0]:.1f}, {m['realworld']['acc_ci95'][1]:.1f}]</span>",
+                    f"{m['realworld']['macro_f1']:.3f}", f"{m['threshold']['threshold']:.2f}",
+                    (f"{m['realworld_at_threshold']['coverage'] * 100:.0f}% / {m['realworld_at_threshold']['accuracy']:.1f}%"
+                     if m['realworld_at_threshold']['accuracy'] is not None else "0% / n.a."),
+                    f"{m['train']['train_time_min']:.0f}"])
+e6_table = table(["Method", "TrashNet test acc. (%)<br><small>TrashNet-only &rarr; mixed</small>",
+                  "Real-world acc. (%) [95% CI]<br><small>TrashNet-only &rarr; mixed</small>", "Real-world macro-F1",
+                  "'Not sure' threshold", "Real-world answered / accuracy of answers", "Train time (min, CPU)"], e6_rows, "results")
+wv_rows = [[s.replace("trashnet_test", "TrashNet test (376)").replace("realworld", "Real-world (600)"), NAMES[k],
+            f"{v['agreement_with_python_%']:.1f}%", f"{v['phone_accuracy_%']:.1f}%", f"{v['python_accuracy_%']:.1f}%"]
+           for s, d in WV["sets"].items() for k, v in d.items()]
+wv_table = table(["Test set", "Method", "Same prediction as Python", "Accuracy in the app", "Accuracy in Python"], wv_rows)
+
 T = {k: v.format(**{
     "A_acc": M["A"]["accuracy"], "B_acc": M["B"]["accuracy"], "C_acc": M["C"]["accuracy"],
     "Av_acc": M["A+"]["accuracy"], "A_f1": M["A"]["macro_f1"], "B_f1": M["B"]["macro_f1"],
@@ -131,6 +157,17 @@ T = {k: v.format(**{
     "B_ep": rB["train_info"]["best_epoch"], "B_eps": rB["train_info"]["epochs_run"],
     "C_ep": rC["train_info"]["best_epoch"], "C_eps": rC["train_info"]["epochs_run"],
     "C_train": rC["trainable_params_M"],
+    **{f"{k}6_tn": M6[k]["trashnet_test"]["accuracy"] for k in "ABC"},
+    **{f"{k}6_rw": M6[k]["realworld"]["accuracy"] for k in "ABC"},
+    **{f"{k}6_rwf1": M6[k]["realworld"]["macro_f1"] for k in "ABC"},
+    "rec6": NAMES[REC6], "thr6": M6[REC6]["threshold"]["threshold"] * 100,
+    "cov6": M6[REC6]["realworld_at_threshold"]["coverage"] * 100,
+    "sel6": M6[REC6]["realworld_at_threshold"]["accuracy"],
+    "valsel6": (M6[REC6]["threshold"]["selective_accuracy"] or 0) * 100,
+    "n_mixed": e6["n_train"], "n_web": len(mixed["web_train"]), "n_webval": len(mixed["web_val"]),
+    "wv_min": min(v["agreement_with_python_%"] for d in WV["sets"].values() for v in d.values()),
+    **{f"{k}6_cl": LK["accuracy_all_vs_clean"][k]["clean_subset"] for k in "ABC"},
+    "n_clean": LK["accuracy_all_vs_clean"]["C"]["n_clean"],
 }) for k, v in TEXT.items()}
 
 CSS = """
@@ -161,7 +198,7 @@ ol.refs li { margin-bottom: 3px; font-size: 9.3pt; }
 html = f"""<!doctype html><html><head><meta charset="utf-8"><title>Trash Sorting Report</title>
 <style>{CSS}</style></head><body>
 <h1>Trash Sorting by Material: Hand-Designed Features vs. a Small CNN vs. a Pretrained Mobile Model</h1>
-<div class="sub">Computer Vision Group Project &middot; West Visayas State University &middot; Group __ &middot; Members: ____________________</div>
+<div class="sub">Computer Vision Group Project &middot; West Visayas State University &middot; with <b>BIN</b>, a trash identification app &middot; Group __ &middot; Members: ____________________</div>
 <div class="abstract"><b>Abstract.</b> {T['abstract']}</div>
 
 <h2>1. Introduction</h2>
@@ -239,13 +276,27 @@ including normalisation (and HOG extraction for A). Training times are CPU wall-
 {fig('exp5_gradcam.png', 'Figure 13. What the methods look at: gradient magnitude used by HOG (A) and Grad-CAM heat maps of B and C on one test image per class.')}
 {T['res5']}
 
-<h3>4.6 Answer to the research question</h3>
+<h3>4.6 Experiment 6 &mdash; mixed-domain training</h3>
+{T['data6']}
+{mix_table}
+{e6_table}
+<p style="font-size:8.8pt;color:#4a555e">Same test sets as Experiments 1 and 2. Arrows: model trained on TrashNet only &rarr; same method retrained
+on TrashNet + web photos with identical architecture and hyper-parameters. &#9733; = method BIN answers with (best real-world macro-F1).</p>
+{fig('exp6_mixed_domain.png', 'Figure 14. Experiment 6: accuracy before (grey) and after (colour) adding real-world photos to training, on both unchanged test sets.')}
+{fig('exp6_confusion_realworld.png', 'Figure 15. Confusion matrices of the mixed-domain models on the 600 real-world test photos.')}
+{fig('exp6_confidence_threshold.png', 'Figure 16. Calibrating the "not sure" threshold on the validation split: share of photos answered and accuracy of those answers.', '62%')}
+{T['res6']}
+
+<h3>4.7 Answer to the research question</h3>
 <div class="key">{T['answer']}</div>
 
-<h2>5. System</h2>
+<h2 class="pb">5. System: BIN</h2>
 {T['system']}
-<figure><img src="app_screenshot.png" style="width:72%"><figcaption>Figure 14. The Gradio application: the recommended method's label is drawn above the photo, with every method's label, confidence and runtime underneath, the measured reason for the recommendation and a disposal tip.</figcaption></figure>
-{fig('system_demo.png', 'Figure 15. The system on six new real-world web photos it has never seen (one per class). The recommended method is right on cardboard, metal and paper and wrong on glass, plastic and the web-style "trash" item, consistent with Experiment 2.', '88%')}
+<figure><img src="bin_phone_screens.png" style="width:100%"><figcaption>Figure 17. The BIN phone app: it opens on the camera with a scanner frame; a result with what to do; a "not sure" answer; the scan history; the about page with the measured accuracy.</figcaption></figure>
+{wv_table}
+<p style="font-size:8.8pt;color:#4a555e">Phone-app check (tools/verify_web.py): every test photo classified by the app's own code (PIL-exact resize, JavaScript HOG + SVM, ONNX networks) in a headless browser and compared with the Python models.</p>
+<figure><img src="app_screenshot.png" style="width:72%"><figcaption>Figure 18. The desktop/Colab version of BIN (Gradio): BIN's answer is drawn above the photo, every method's label, confidence and runtime underneath, with the reason and what to do.</figcaption></figure>
+{fig('system_demo.png', 'Figure 19. BIN on six real-world web photos it has never seen (one per class); the green band shows its answer or NOT SURE.', '88%')}
 
 <h2>6. Conclusion and limitations</h2>
 {T['conclusion']}

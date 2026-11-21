@@ -45,7 +45,7 @@ All three methods use **the same saved split** (`splits/split.json`), the **same
 
 **How to run in Google Colab:** open this notebook from GitHub (the first cell clones the repository; or upload `GroupNo_CVProject.zip` to *My Drive* and set `GIT_URL = ""`),
 choose *Runtime -> Change runtime type -> GPU*, then *Runtime -> Run all*.
-A full run from scratch takes roughly 30-40 minutes on a Colab T4 GPU.
+A full run from scratch (all six experiments) takes roughly one hour on a Colab T4 GPU.
 """)
 
 code(r"""
@@ -282,15 +282,49 @@ show("exp5_failures.png"); show("exp5_gradcam.png")
 """)
 
 md(r"""
-## 10. The system: all three methods on new inputs + recommendation
-`src/system.py` runs the three methods, draws each label/confidence/runtime on the image and names the
-recommended method (chosen automatically from the measured macro-F1, real-world accuracy and runtime).
-The web app is `app/app.py` (Gradio). Below, the system is run on new images it has never seen
-(real-world web photos and, if present, the group's own photos in `data/own_photos/`).
+## 10. Experiment 6 - mixed-domain training (fixing the domain gap)
+Experiment 2 showed a large accuracy drop on real-world photos. Here every method is retrained, with the
+**same architecture and hyper-parameters**, on TrashNet train **plus** real-world web photos
+(`src/prepare_mixed.py`: up to 300 train + 40 validation web photos per class; the 600 real-world test photos,
+their near-duplicates and any near-copy of a TrashNet image are excluded). The **test sets are unchanged**.
+A confidence threshold is calibrated on validation so that BIN says *"not sure"* instead of guessing.
+These models are the ones used by the BIN app.
 """)
 code(r"""
-from system import TrashSorter, METHOD_NAMES
-sorter = TrashSorter()
+import prepare_mixed, mixed_domain
+if need(prepare_mixed.MIXED_FILE):
+    prepare_mixed.main()
+mx = load_json(prepare_mixed.MIXED_FILE)
+display(pd.DataFrame(mx["stats"]["per_class"]).T)
+done6 = mixed_domain.OUT.exists() and all(k in load_json(mixed_domain.OUT)["methods"] for k in "ABC")
+if RETRAIN or not done6:
+    mixed_domain.main()    # resumes: methods already finished are skipped
+e6 = load_json(mixed_domain.OUT)
+mixed_domain.figures(e6)
+display(pd.DataFrame({E.NAMES[k]: {
+    "TrashNet test acc. (TrashNet-only model)": v["baseline_trashnet_only"]["trashnet_test_acc"],
+    "TrashNet test acc. (mixed model)": v["trashnet_test"]["accuracy"],
+    "Real-world acc. (TrashNet-only model)": v["baseline_trashnet_only"]["realworld_acc"],
+    "Real-world acc. (mixed model)": v["realworld"]["accuracy"],
+    "Real-world macro-F1 (mixed model)": v["realworld"]["macro_f1"],
+    "'Not sure' threshold": v["threshold"]["threshold"],
+    "Real-world photos answered at threshold (%)": 100 * v["realworld_at_threshold"]["coverage"],
+    "Accuracy of those answers (%)": v["realworld_at_threshold"]["accuracy"]} for k, v in e6["methods"].items()}).round(2))
+show("exp6_mixed_domain.png"); show("exp6_confusion_realworld.png"); show("exp6_confidence_threshold.png", 650)
+""")
+
+md(r"""
+## 11. The system: BIN
+`src/system.py` runs the three methods, draws each label/confidence/runtime on the image and answers with the
+recommended method - the one with the best macro-F1 on **real-world** photos - or says *"not sure"* below the
+calibrated threshold. It is used by the desktop/Colab app `app/app.py` (Gradio). The **phone app** in `web/`
+(https://karlsxo.github.io/Computer-Vison---Final-Project/) runs the same models on the phone; `tools/verify_web.py`
+checks that its predictions agree with Python. Below, the system is run on photos it has never seen.
+""")
+code(r"""
+from system import BinSystem, METHOD_NAMES
+sorter = BinSystem()
+print("models:", sorter.source, "| answers with:", METHOD_NAMES[sorter.recommended], "| not-sure threshold:", sorter.threshold)
 display(Markdown(sorter.reason))
 demo_items = (own_photo_items()[:3] or []) + load_realworld()[::100][:6 - min(3, len(own_photo_items()))]
 fig, axes = plt.subplots(2, 3, figsize=(16, 11))
@@ -308,8 +342,16 @@ if LAUNCH_APP:
     webapp.build_ui().launch(share=IN_COLAB)
 """)
 
+code(r"""
+# Phone app check (results/web_verification.json, produced by tools/verify_web.py in a headless browser)
+wv = RESULTS_DIR / "web_verification.json"
+if wv.exists():
+    v = load_json(wv)
+    display(pd.DataFrame({f"{s} / {k}": m for s, d in v["sets"].items() for k, m in d.items()}).T)
+""")
+
 md(r"""
-## 11. Answer to the research question
+## 12. Answer to the research question
 The discussion below is filled from the measured numbers (see `docs/` and the report for the full analysis).
 """)
 code(r"""
@@ -325,6 +367,9 @@ for k in ["A", "B", "C"]:
 small = e3["runs"]
 lines.append("* With only 10 images per class: " + ", ".join(
     f"{E.NAMES[k]} {small[f'{k}_10']['accuracy']:.1f}%" for k in ["A", "B", "C"]) + ".")
+lines.append("* Adding real-world photos to training (Experiment 6) raises real-world accuracy to " + ", ".join(
+    f"{E.NAMES[k]} {e6['methods'][k]['realworld']['accuracy']:.1f}%" for k in ["A", "B", "C"])
+    + f"; BIN answers with {METHOD_NAMES[sorter.recommended]}.")
 display(Markdown("\n".join(lines)))
 """)
 

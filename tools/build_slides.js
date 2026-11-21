@@ -77,7 +77,7 @@ pres.addSection({ title: "Introduction" });
 let s = pres.addSlide({ masterName: "DARK", sectionTitle: "Introduction" });
 s.addText("Trash Sorting by Material", { placeholder: "title" });
 s.addText([{ text: "Hand-designed features vs. a small CNN vs. a pretrained mobile model", options: { breakLine: true } },
-  { text: "Computer Vision Group Project | West Visayas State University | Group __", options: { fontSize: 14 } }],
+  { text: "with BIN, a trash identification app  ·  Computer Vision Group Project | West Visayas State University | Group __", options: { fontSize: 14 } }],
   { placeholder: "body" });
 s.addNotes("Introduce the group. One sentence: we compared three families of computer-vision methods on the job of telling what material a piece of trash is made of, and built an app around them.");
 
@@ -244,29 +244,57 @@ bullets(s, [`A confuses: ${tc("A")} - HOG sees edges only, no colour or shine`,
   { x: 7.8, y: 1.4, w: 4.95, h: 5.4, fontSize: 14 });
 s.addNotes("Explain the confusion pairs with theory: HOG discards colour, so glass vs plastic and paper vs cardboard are hard; texture and colour learned by CNNs fix much of this.");
 
-// ---------------------------------------------------------------- 11 app
+// ---------------------------------------------------------------- 11 experiment 6 (native chart)
+const e6 = J("exp6_mixed_domain.json"), M6 = e6.methods;
+const REC6 = ["A", "B", "C"].reduce((a, b) => (M6[b].realworld.macro_f1 > M6[a].realworld.macro_f1 ? b : a));
+s = pres.addSlide({ masterName: "CONTENT", sectionTitle: "Results" });
+s.addText("Experiment 6: fixing the domain gap", { placeholder: "title" });
+const labs3 = ["HOG + SVM", "Scratch CNN", "MobileNetV3"];
+s.addChart(pres.charts.BAR, [
+  { name: "Trained on TrashNet only", labels: labs3, values: ["A", "B", "C"].map((k) => +M6[k].baseline_trashnet_only.realworld_acc.toFixed(1)) },
+  { name: "Trained on TrashNet + web photos", labels: labs3, values: ["A", "B", "C"].map((k) => +M6[k].realworld.accuracy.toFixed(1)) }],
+  { x: 0.6, y: 1.35, w: 7.4, h: 5.4, barDir: "col", barGapWidthPct: 60, chartColors: ["B8C4BD", "1F8B4C"],
+    showValue: true, dataLabelPosition: "outEnd", dataLabelFontSize: 11, dataLabelFontFace: "+mn-lt",
+    valAxisMaxVal: 100, valAxisMinVal: 0, valAxisTitle: "real-world test accuracy (%)", showValAxisTitle: true,
+    valAxisTitleFontSize: 12, valAxisLabelFontSize: 11, catAxisLabelFontSize: 12, catAxisLabelFontFace: "+mn-lt",
+    valAxisLabelFontFace: "+mn-lt", valAxisTitleFontFace: "+mn-lt", valAxisLabelColor: "4A555E", catAxisLabelColor: "4A555E",
+    valGridLine: { color: "E1E7E3", size: 0.5 }, catGridLine: { style: "none" },
+    showLegend: true, legendPos: "b", legendFontSize: 12, legendFontFace: "+mn-lt", showTitle: false });
+const r6 = M6[REC6];
+[[`${f1(r6.realworld.accuracy)}%`, `${labs3["ABC".indexOf(REC6)]} on unseen real-world photos (was ${f1(r6.baseline_trashnet_only.realworld_acc)}%)`],
+ [`${f1(r6.trashnet_test.accuracy)}%`, "same model on the TrashNet test photos"],
+ [`${f1(r6.realworld_at_threshold.accuracy)}%`, `correct when BIN answers (${Math.round(r6.realworld_at_threshold.coverage * 100)}% answered, else "not sure")`]]
+  .forEach(([n, l], i) => {
+    const y = 1.45 + i * 1.75;
+    card(s, 8.4, y, 4.3, 1.55, HEX.lt2);
+    txt(s, n, { x: 8.6, y: y + 0.12, w: 3.9, h: 0.7, fontSize: 30, bold: true, color: C.accent1, fontFace: THEME.headFontFace });
+    txt(s, l, { x: 8.6, y: y + 0.85, w: 3.9, h: 0.6, fontSize: 13, color: "4A555E" });
+  });
+s.addNotes("Same architectures and settings, same test sets: only the training data changed (TrashNet + web photos, with every near-copy of a test photo removed). This is what made BIN accurate on real photos. Below the calibrated confidence threshold BIN says 'not sure' instead of guessing.");
+
+// ---------------------------------------------------------------- 12 BIN app
 pres.addSection({ title: "System" });
 s = pres.addSlide({ masterName: "CONTENT", sectionTitle: "System" });
-s.addText("The application", { placeholder: "title" });
-const shot = path.join(ROOT, "report", "app_screenshot.png");
-if (fs.existsSync(shot)) fitImage(s, shot, 0.6, 1.35, 7.6, 5.45, "Screenshot of the app");
-bullets(s, ["Upload or webcam photo -> all three methods run",
-  "Labels, confidence and runtime drawn on the image",
-  "Recommends the best method by default, with the measured reason",
-  "Warns when methods disagree or confidence is low; RA 9003 disposal tip",
-  "Gradio: python app/app.py, or a public link from Colab"], { x: 8.5, y: 1.45, w: 4.25, h: 5.3, fontSize: 15 });
-s.addNotes("Live demo if possible: upload two new photos, show that all three methods appear and the recommended one is starred.");
+s.addText("BIN: the trash identification app", { placeholder: "title" });
+const screens = path.join(ROOT, "report", "bin_phone_screens.png");
+if (fs.existsSync(screens)) fitImage(s, screens, 0.6, 1.3, 12.1, 4.15, "BIN phone app screens");
+bullets(s, ["Opens straight to the camera: frame the item, tap Identify (or pick from the gallery)",
+  `All three methods run on the phone; BIN answers with ${labs3["ABC".indexOf(REC6)]} (best on real photos) or says "not sure"`,
+  "Shows recyclable / residual and what to do; photos never leave the phone; works offline",
+  "karlsxo.github.io/Computer-Vison---Final-Project  ·  desktop version: python app/app.py"],
+  { x: 0.6, y: 5.6, w: 12.1, h: 1.4, fontSize: 14, paraSpaceAfter: 4 });
+s.addNotes("Live demo on a phone: open the link, point the camera at a bottle and a paper, show the result, the three methods and the not-sure behaviour.");
 
-// ---------------------------------------------------------------- 12 conclusion
+// ---------------------------------------------------------------- 13 conclusion
 pres.addSection({ title: "Conclusion" });
 s = pres.addSlide({ masterName: "DARK", sectionTitle: "Conclusion" });
-s.addText("Answer: pretrained MobileNetV3, but mind the domain gap", { placeholder: "title" });
+s.addText("Answer: pretrained MobileNetV3, trained on real photos", { placeholder: "title" });
 s.addText([
   { text: `Best on clean photos: ${f1(M.C.accuracy)}% (vs ${f1(M.B.accuracy)}% scratch CNN, ${f1(M.A.accuracy)}% HOG + SVM)`, options: { bullet: true, breakLine: true } },
-  { text: `Real-world photos: ${f1(RW.C.accuracy)}% vs ${f1(RW.B.accuracy)}% and ${f1(RW.A.accuracy)}%: every method drops`, options: { bullet: true, breakLine: true } },
-  { text: "Next: collect local phone photos (data/own_photos) and fine-tune on them", options: { bullet: true } }],
+  { text: `Trained on studio photos only, every method drops on real photos (MobileNetV3: ${f1(RW.C.accuracy)}%)`, options: { bullet: true, breakLine: true } },
+  { text: `Adding real-world photos to training fixes most of it: ${f1(M6.C.realworld.accuracy)}% (MobileNetV3), now in the BIN app`, options: { bullet: true } }],
   { placeholder: "body" });
-s.addNotes("Close with the answer to the research question and one concrete next step. Then invite questions.");
+s.addNotes("Close with the answer to the research question: pretraining wins, and the training data must look like the deployment photos. Then invite questions.");
 
 (async () => {
   const out = path.join(ROOT, "report", "Trash_Sorting_Slides.pptx");

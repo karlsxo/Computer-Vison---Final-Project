@@ -19,8 +19,10 @@ technical companion to the PDF report (`report/`) and the executed notebook
 | **Main data** | TrashNet (2,527 → 2,519 images after cleaning), one saved 70/15/15 split |
 | **Domain-shift data** | 600 unseen web photos (100/class) from the 12-class Garbage Classification dataset |
 | **Research question** | Which method best sorts trash by material, and does it still work on messy real-world photos after training on clean ones? |
+| **Application** | **BIN** — phone app that opens on the camera and identifies the trash on the phone: https://karlsxo.github.io/Computer-Vison---Final-Project/ (desktop version: `app/app.py`) |
+| **Headline results** | TrashNet test: MobileNetV3 92.8 %, CNN 71.3 %, HOG + SVM 52.9 %. Real-world photos: 62.8 / 36.2 / 9.3 % when trained on studio photos only, **97.7** / 78.8 / 47.8 % after mixed-domain training (Experiment 6, used by BIN) |
 
-Final numbers: see [§9 Results](#9-results) and `results/results_table.md`.
+Final numbers: see [§9 Results](#9-results), `results/results_table.md` and `results/results_table_exp6.md`.
 
 ---
 
@@ -37,9 +39,15 @@ The brief (*Computer Vision Comparison Project*) requires, and this project deli
 | Pretrained: correct preprocessing and output format, same splits | §6 |
 | Same train/val/test split for all methods | `splits/split.json`, loaded by every method through `common.load_split()` |
 | Metrics: top-1 accuracy, macro-F1, confusion matrix + runtime (ms, CPU/GPU), params (M), train time (min) | §9, `results/results_table.md` |
-| 5 experiments | §8 (the brief does not list them; we defined five — see §8) |
-| System: upload image → results drawn on input → recommended method with explanation | §10, `app/app.py`, `src/system.py` |
+| 5 experiments | §8 (the brief does not list them; we defined five — see §8), plus a sixth (mixed-domain training) for the application |
+| System: "a small application that solves a real local problem and lets a user run all three methods on new input" | BIN (§10–§11): phone app `web/` (live link) + desktop app `app/app.py`; trash segregation under RA 9003 |
+| System input: the user uploads an image or video | BIN: take a photo with the camera (opens immediately) or upload from the gallery |
+| System output: results drawn on the input | the answer is drawn over the photo; every method's label, confidence and runtime shown |
+| Recommendation: names the best method by default and explains | BIN answers with ★ MobileNetV3 (best real-world macro-F1) and states the measured reason; "not sure" below the calibrated threshold |
+| Deployment: any application | Progressive Web App on GitHub Pages (installable, offline) + Gradio app; §11 |
+| Proposal form (one page) | `report/Proposal_Form.md` / `.pdf` |
 | Deliverables: executed notebook + one .py per method, data link, PDF (Intro/Methods/Experiments/Results), slides, contribution statement | §12 |
+| Rules: same splits for all three models; AI use disclosed | every experiment uses the same split/test sets for A, B, C; §13 and the contribution statement |
 
 ---
 
@@ -135,6 +143,34 @@ Final split (`splits/split.json`, paths relative to the project root):
 * Seeds fixed (`common.set_seed(42)`); library versions printed in the notebook.
 
 ---
+
+### 3.5 Mixed-domain training data for Experiment 6 (`src/prepare_mixed.py`)
+Experiment 2 showed that models trained only on TrashNet's studio photos fail on real-world photos,
+and a phone app only sees real-world photos. We therefore built a second **training** set that adds
+real-world web photos from the 12-class dataset to TrashNet's training split. Leakage rules, all
+checked in code:
+
+* none of the 600 real-world **test** photos is used, nor any web image whose detail signature
+  correlates > 0.80 with one of them (near-copy);
+* no web image that is a near-copy of **any** TrashNet image is used — this removed essentially all
+  of TrashNet again (the counts below match TrashNet's class sizes: the web dataset contains TrashNet),
+  so TrashNet test photos cannot leak into training;
+* near-duplicates inside the web set are grouped and a group goes entirely to train or to validation;
+* up to 300 web photos per class are added to training and 40 per class to validation (seed 42);
+* the **test sets are unchanged**, so Experiment 6 is directly comparable with Experiments 1 and 2.
+
+| class | web candidates | near-copies of TrashNet (removed) | near-copies of test photos (removed) | usable | added to train | added to val |
+|---|---|---|---|---|---|---|
+| cardboard | 791 | 403 | 2 | 386 | 300 | 40 |
+| glass | 1916 | 474 | 19 | 1424 | 300 | 40 |
+| metal | 669 | 410 | 4 | 255 | 215 | 40 |
+| paper | 950 | 594 | 0 | 356 | 300 | 40 |
+| plastic | 765 | 477 | 8 | 280 | 240 | 40 |
+| trash | 597 | 0 | 22 | 575 | 300 | 40 |
+
+Result: **3419 training images** (1,764 TrashNet + 1655 web) and
+**619 validation images** (379 TrashNet + 240 web), in `splits/mixed.json`.
+Metal and plastic have fewer usable web photos (255 and 280) because most of them were TrashNet copies.
 
 ## 4. Method A — HOG + linear SVM (classical)
 
@@ -257,6 +293,11 @@ doubling blocks 1–2 nearly doubles the compute for few extra parameters.
 * `runtime_ms()` — CPU (and GPU if available) latency at batch size 1 including normalisation,
   excluding JPEG decoding (identical for all methods).
 * `classification_metrics()` — our own confusion matrix, accuracy, per-class P/R/F1, macro-F1.
+* **Low-memory loading** (added for Experiment 6, which has twice as many training images while the
+  laptop had < 1 GB of free RAM): image caches are written image by image into a memory-mapped `.npy`
+  file (`common.load_array_cache`) and read back lazily (`torch_common.LazyImages`); only the current
+  batch is copied into memory. Training used ~250 MB of RAM, and a check confirmed the lazily loaded
+  images are identical to the in-memory ones.
 
 Smoke test before the long runs: 2 epochs of B and C on 5 images/class — both pipelines ran end
 to end, frozen layers verified frozen, augmentation output range verified in [0, 1].
@@ -279,6 +320,11 @@ The brief's rubric mentions "all 5 experiments" without listing them; we defined
 5. **Error analysis** — top confused class pairs, failure examples, agreement between methods,
    majority-vote ensemble, Grad-CAM (Selvaraju et al., 2017) for B and C and gradient-magnitude maps
    for A.
+6. **Mixed-domain training** (`src/mixed_domain.py`, added for the app) — every method is retrained,
+   with the same architecture and hyper-parameters (B: 30 epochs, C: 3 head + 10 epochs, A: lambda
+   re-tuned), on TrashNet + web photos (§3.5) and evaluated on both unchanged test sets. A confidence
+   threshold is calibrated on the validation split: the smallest threshold whose accepted predictions are
+   at least 95 % correct; below it the app says "not sure". These are the models used by BIN.
 
 Run order and wall-clock times on the laptop CPU: Method A 5 min (tuning incl.), Method B attempt 1
 stopped after 28 min, attempt 2 101 min, Method C 45 min, experiments 1/2/4/5 under 1 min,
@@ -344,9 +390,10 @@ starts from good features. Figure `exp4_efficiency.png`.
 
 ### 9.6 Answer to the research question
 **MobileNetV3-Large (pretrained) is the best method** on every axis that matters for accuracy —
-clean data, small data and real-world photos — and is fast enough for a phone. It **only partly**
-survives the move to real-world photos (62.8 %, ≈ 75 % excluding the ill-defined trash class):
-before deployment it should be fine-tuned on local photos, with "trash" defined as the local MRF defines it.
+clean data, small data and real-world photos — and is fast enough for a phone. Trained only on studio
+photos it **only partly** survives the move to real-world photos (62.8 %); **adding real-world photos to
+training (Experiment 6) raises this to 97.7 %** without hurting the studio photos. BIN therefore
+answers with the mixed-domain MobileNetV3 and says "not sure" below 65 % confidence.
 
 ### 9.7 Hypotheses from the proposal — verdict
 | Hypothesis | Verdict |
@@ -356,64 +403,149 @@ before deployment it should be fine-tuned on local photos, with "trash" defined 
 | All methods lose accuracy under domain shift; scratch CNN may lose most | Partly — all lose; HOG loses the most, then the scratch CNN (Grad-CAM shows background reliance) |
 | Paper/cardboard and glass/plastic are confusion pairs | **Supported** for C (cardboard→paper, plastic↔glass) and B (plastic→glass) |
 
+### 9.8 Experiment 6 — mixed-domain training (the models used by BIN)
+
+Same architectures and hyper-parameters, trained on TrashNet + web photos (§3.5); **same test sets** as
+Experiments 1 and 2. Arrows: TrashNet-only model → mixed-domain model. ★ = the method BIN answers with.
+
+| Method | TrashNet test acc. (%) | Real-world acc. (%) [95 % CI] | Real-world acc., clean subset (%) | Real-world macro-F1 | "Not sure" threshold | Real-world photos answered / accuracy of the answers | Runtime (ms/img, CPU) | Train time (min, CPU) |
+|---|---|---|---|---|---|---|---|---|
+| HOG + linear SVM | 52.9 → **47.9** | 9.3 → **47.8** [44.0–51.5] | 43.7 | 0.465 | 0.45 | 4 % / 88.0 % | 2.6 | 4 |
+| 4-block CNN (scratch) | 71.3 → **69.7** | 36.2 → **78.8** [75.5–82.2] | 78.2 | 0.782 | 0.95 | 21 % / 98.4 % | 17.6 | 186 |
+| ★ MobileNetV3-Large (pretrained) | 92.8 → **94.1** | 62.8 → **97.7** [96.3–98.8] | 97.7 | 0.977 | 0.65 | 94 % / 99.5 % | 37.6 | 102 |
+
+* **Adding real-world photos to training fixed most of the domain gap:** MobileNetV3 62.8 % → **97.7 %**
+  on the unseen real-world photos, the CNN 36.2 % → 78.8 %, HOG + SVM 9.3 % → 47.8 %,
+  while TrashNet-test accuracy stayed about the same (MobileNetV3 even improved, 92.8 → 94.1 %).
+* **Second leakage check** (`tools/leakage_check.py`, `results/exp6_leakage_check.json`, `exp6_leakage_pairs.png`):
+  the pixel signature of §3.2 misses copies of the same web picture that were cropped, mirrored or watermarked.
+  Comparing ImageNet MobileNetV3 features showed such pairs between web-training and real-world-test photos
+  (above ≈ 0.875 cosine similarity many pairs are the same picture; below ≈ 0.85 they are different objects).
+  With a conservative cut of 0.85, 124 of the 600 test photos have a close training neighbour; on the
+  remaining **clean subset of 476 photos** the accuracies are
+  97.7 % (MobileNetV3), 78.2 % (CNN) and
+  43.7 % (HOG + SVM): the networks' gains are real, not leakage.
+* **"Not sure" threshold:** chosen on the validation split as the lowest confidence whose answers are ≥ 98.5 %
+  correct (first setting 95 % gave 0.30, i.e. BIN would almost never say "not sure", so the target was raised
+  before deployment). For MobileNetV3 this is 0.65: on the real-world test photos BIN answers
+  94 % of them and 99.5 % of those answers are correct
+  (`exp6_confidence_threshold.png`).
+* **Runtime:** measured first right after training while other jobs ran (MobileNetV3 44.6 ms), then again on an
+  idle CPU (`tools/remeasure_runtime.py`): 37.6 ms. The architectures are unchanged, so
+  Experiment 4's numbers remain the controlled comparison.
+* Figures: `exp6_mixed_domain.png`, `exp6_confusion_realworld.png`, `exp6_confidence_threshold.png`; table:
+  `results/results_table_exp6.md`.
+
+### 9.9 Phone app verification
+
+`tools/verify_web.py` ran BIN's own code in a headless browser on both test sets and compared it with Python:
+
+| Test set | Method | Same prediction as Python | Accuracy in the app | Accuracy in Python |
+|---|---|---|---|---|
+| TrashNet test (376) | HOG + linear SVM | 100.00 % | 47.9 % | 47.9 % |
+| TrashNet test (376) | 4-block CNN (scratch) | 100.00 % | 69.7 % | 69.7 % |
+| TrashNet test (376) | MobileNetV3-Large (pretrained) | 100.00 % | 94.2 % | 94.2 % |
+| Real-world (600) | HOG + linear SVM | 99.83 % | 47.8 % | 47.8 % |
+| Real-world (600) | 4-block CNN (scratch) | 100.00 % | 78.8 % | 78.8 % |
+| Real-world (600) | MobileNetV3-Large (pretrained) | 100.00 % | 97.7 % | 97.7 % |
+
+The single HOG + SVM difference on the real-world set comes from an image that the browser decodes slightly
+differently from Pillow (e.g. a PNG with transparency); for phone photos (JPEG) the pipelines are identical.
+`tools/test_phone_app.py` passed: the app opens on the live camera, identifies a camera frame ("not sure" for
+an abstract test pattern) and an uploaded photo (metal, 97 % sure), the correction and history work, and no
+JavaScript error occurs on any screen (screenshots in `results/phone_screens/`).
+
 ---
 
-## 10. The system (`src/system.py`, `app/app.py`)
-* **Input:** the user uploads a photo (or uses the webcam / clipboard) in a Gradio web app.
-* **Processing:** the image is resized for each method (128 px for A and B, 224 px for C) and all
-  three run; each prediction's label, confidence and measured runtime are kept.
-* **Output drawn on the input:** the recommended method's label in large text on the photo and
-  three coloured bars underneath (one per method: label, confidence, runtime, ★ for the
-  recommended one), plus a table with all class probabilities.
-* **Recommendation:** computed automatically from `results/exp1_main.json` and
-  `exp2_domain_shift.json` — the method with the highest test macro-F1 is the default; the
-  explanation quotes its accuracy, its real-world accuracy and its CPU runtime. The app also says
-  whether the three methods agree, warns when confidence < 50 %, and gives a disposal tip for the
-  predicted material (Philippine context: RA 9003 segregation into biodegradable, recyclable and
-  residual waste).
-* **Deployment:** `python app/app.py` (local, http://127.0.0.1:7860) or, in Colab,
-  `LAUNCH_APP = True` in the notebook, which prints a public `*.gradio.live` link.
+## 10. The system: BIN
+
+The comparison is turned into a working application called **BIN** (the logo is a trash can whose
+cover carries a large letter B: `web/icons/logo.svg`). BIN exists in two forms that use the **same
+models and the same rules**:
+
+| | Phone app (main) | Desktop / Colab app |
+|---|---|---|
+| Code | `web/` (Progressive Web App) | `app/app.py` (Gradio) + `src/system.py` |
+| Where it runs | on the phone itself (WebAssembly), offline after the first visit | Python on a laptop or Colab |
+| Open it | https://karlsxo.github.io/Computer-Vison---Final-Project/ | `python app/app.py` → http://127.0.0.1:7860 |
+
+**Rules shared by both versions**
+
+* **Models:** the mixed-domain models of Experiment 6 (`models/mixed/`), trained on TrashNet plus
+  real-world web photos, because the app sees real-world photos. (`src/system.py` falls back to the
+  TrashNet-only models if the mixed ones are missing.)
+* **Which method gives the answer:** all three methods run on every photo (course requirement), and
+  BIN answers with the method that has the **best macro-F1 on the real-world test set** (computed
+  automatically from `results/exp6_mixed_domain.json` → `web/models/meta.json`). The explanation shown to
+  the user quotes its real-world and TrashNet accuracy.
+* **"Not sure":** if the answering method's confidence is below the threshold calibrated on the
+  validation split (Experiment 6), BIN says *Not sure*, shows its best guess, and asks for a retake
+  (one item, plain background, good light) instead of giving a possibly wrong answer.
+* **Output drawn on the input:** the answer (or NOT SURE) is drawn over the photo; every method's label,
+  confidence and measured runtime is shown, with ★ on the method used for the answer; plus what to do
+  with the material (recyclable / residual, RA 9003 context) and a list of handling steps.
 
 ---
 
-## 11. Phone app (`web/`)
+## 11. The BIN phone app (`web/`)
 
-A Progressive Web App that runs **all three methods on the phone**, designed after the group's mock-up
-(green header, rounded cards, bottom bar with a centre scan button, scanner frame, stats donut, profile).
+### 11.1 What the user sees
+1. **Opening BIN goes straight to the camera** (start URL `#/scan`): a full-screen live view with a
+   square scanner frame, the BIN logo, a status pill ("Preparing the AI · 45%" → "Point the camera at
+   one piece of trash"), and three buttons: **Gallery** (upload), **Identify** (take the photo), **Flip**
+   (front/back camera). If the live camera is not available (no permission, or not https), the Identify
+   button opens the phone's own camera app instead, so photos can always be taken.
+2. **Result:** the photo with the answer band, the material with its emoji and a *Recyclable* / *Residual*
+   chip and the confidence; *What to do* and handling steps; *Not right? Pick the material* (corrects the
+   saved result); *All three methods* (label, confidence bar, runtime on this phone, ★ method, the reason
+   for the default and whether the methods agree); and a large **Scan next item** button.
+3. **Scan history** (button at the top of the camera): thumbnails, material, sure / not sure /
+   corrected, time; delete or clear. Stored only on the phone.
+4. **About BIN:** the logo, help articles (*How to get an accurate answer*, *How BIN works* with the
+   measured accuracy of each method, *What is wish-cycling?*, *RA 9003 in one minute*), the six material
+   guides, a privacy note and a link to this repository.
 
-* **URL:** https://karlsxo.github.io/Computer-Vison---Final-Project/ — open it in Chrome (Android) or Safari (iPhone), then *Add to Home Screen*.
-* **Input:** live camera with a scanner frame (the photo is cropped to the frame, so the item fills the
-  image like the training photos), the phone's camera app, or the gallery. EXIF orientation is applied.
-* **Output:** material + recyclable/residual, the three methods' labels, confidences and on-phone runtimes,
-  the recommended method (highest test macro-F1, read from `web/models/meta.json`) with its measured
-  reason, a disposal tip, and a "Not right? choose the material" correction.
-* **Extras:** history with thumbnails, points (+10 recyclable, +5 residual) and levels, stats donut,
-  badges, editable name, Learn guides/articles (wish-cycling, RA 9003, how the AI decides, photo tips).
-  Everything is stored only on the phone (localStorage); no photo is uploaded.
-* **How the models run:** `tools/export_mobile.py` exports B and C to ONNX (opset 17) with
-  normalisation and softmax inside the graph (max difference to PyTorch 3·10⁻⁶, 100 % same predictions)
-  and A's SVM weights + standardisation to a 259 kB binary; HOG is re-implemented in `web/js/hog.js`.
-  onnxruntime-web 1.20.1 (WebAssembly) is bundled in `web/vendor/ort/`.
+The earlier version of the app (named "Trash Sorter") also had points, levels, badges, a stats donut
+and a profile; these were **removed** so that the app focuses only on recognising the trash.
+
+### 11.2 How it works
+* **Models on the phone:** `tools/export_mobile.py` exports B and C to ONNX (opset 17) with the
+  normalisation and softmax inside the graph (checked against PyTorch: max difference ≈ 3·10⁻⁶, 100 %
+  same predictions) and A's SVM weights + standardisation to a 259 kB binary. HOG is re-implemented in
+  JavaScript (`web/js/hog.js`); the networks run with onnxruntime-web 1.20.1 (WebAssembly), bundled in
+  `web/vendor/ort/` with its MIT licence. `web/models/meta.json` records which training data the models
+  used, their accuracy on both test sets, each method's "not sure" threshold and the answering method.
 * **Exact preprocessing:** `web/js/imaging.js` re-implements Pillow's BILINEAR resize (anti-aliased
-  triangle filter, 22-bit fixed-point, horizontal then vertical pass), because a plain canvas resize
-  gives slightly different pixels.
-* **Verification:** `tools/verify_web.py` runs the phone pipeline in a headless browser on all 376 test
-  images: agreement with Python = **100 % for A, B and C** (accuracy 52.9 / 71.3 / 92.8 %).
-* **Offline:** a service worker (`web/sw.js`) caches the app and models (~32 MB) after the first visit.
-* **Tested** in an emulated phone (390×844) with a fake camera: every screen and flow, no JS errors.
+  triangle filter, 22-bit fixed point, horizontal then vertical pass), because a plain canvas resize gives
+  slightly different pixels than the ones the models were trained on. EXIF orientation is applied.
+* **Scanner crop:** a live-camera photo is cropped to the square scanner frame, so the item fills the
+  picture like in the training photos (uploads are used whole).
+* **Offline and updates:** a service worker (`web/sw.js`) caches the app and models (~32 MB) after the
+  first visit; changing its `VERSION` makes phones download the new version and reload once.
+* **Privacy:** photos are processed on the phone and never uploaded; history uses `localStorage`.
 
+### 11.3 How it was verified
+* `tools/verify_web.py` runs the app's own code (PIL-exact resize, JavaScript HOG + SVM, ONNX networks)
+  in a headless browser on **all 376 TrashNet test photos and all 600 real-world test photos** and
+  compares every prediction with the Python models (results in `results/web_verification.json`, see §9.8).
+* `tools/test_phone_app.py` runs the whole app in an emulated phone (390×844, fake camera): it checks
+  that the app opens on the live camera, identifies a camera frame and an uploaded photo, that the
+  correction and history work, visits every page, and fails on any JavaScript error.
 
+---
+
+## 12. Deliverables map
 
 | Deliverable | File |
 |---|---|
 | Executed notebook (outputs visible, Colab-ready) | `notebooks/CV_Project.ipynb` |
 | One .py module per method | `src/hog_svm.py`, `src/scratch_cnn.py`, `src/pretrained_mobilenet.py` |
 | Data links + local data | README §Datasets; `splits/*.json`; `data/own_photos/` (optional) |
-| PDF report (Introduction, Methods, Experiments, Results) | `report/Trash_Sorting_Report.pdf` |
+| PDF report (Introduction, Methods, Experiments, Results, System) | `report/Trash_Sorting_Report.pdf` |
 | Slides (10 min) | `report/Trash_Sorting_Slides.pptx` |
 | Contribution statement incl. AI disclosure | `report/Contribution_Statement.md` |
-| Application | `app/app.py` |
-| Results table | `results/results_table.md` / `.csv` |
+| Application (system build) | BIN phone app `web/` (live link above) and desktop app `app/app.py` |
+| Results table | `results/results_table.md` / `.csv`; Experiment 6: `results/exp6_mixed_domain.json` |
 
 ## 13. AI-assistance disclosure (required by the brief)
 An AI coding assistant (Claude) was used to help write and debug the code, run the experiments
@@ -437,13 +569,13 @@ statement.
 
 ## 15. What the group still has to do before submitting
 1. Fill in the group number and member names: report header (`tools/build_report.py`, line with
-   "Group __"), slide 1 (`tools/build_slides.js`), `report/Contribution_Statement.md`; then rebuild with
-   `python tools/build_report.py` and `node tools/build_slides.js` (from `tools/`).
+   "Group __"), slide 1 (`tools/build_slides.js`), `report/Contribution_Statement.md` and
+   `report/Proposal_Form.md`; then rebuild with `python tools/build_report.py` and `node tools/build_slides.js`
+   (from `tools/`).
 2. Rename the zip to your real group number (`GroupNo_CVProject.zip` → e.g. `Group3_CVProject.zip`).
-3. Record the 3-minute demo video: run `python app/app.py`, classify the same new photos with all
-   three methods (the `app/examples/` images or your own).
-4. Optional but recommended: take 20–30 phone photos per class in Iloilo, save them in
-   `data/own_photos/<class>/`, and re-run experiment 2 (`python src/experiments.py 2`) — they are
-   evaluated automatically as a second real-world test set.
+3. Test BIN on your phones with real trash (link in §10) and record the 3-minute demo video showing all three
+   methods on the same new photos.
+4. Recommended: save 20–30 of your own phone photos per class in `data/own_photos/<class>/` and run
+   `python src/experiments.py 2` — they are evaluated automatically as a local test set.
 5. Every member: read the code of all three methods and this document; be ready to explain every line.
 6. Optional: update the NVIDIA driver (≥ 560) to train on the local GPU, or run the notebook on Colab.
