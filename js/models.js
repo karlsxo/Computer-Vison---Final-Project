@@ -1,4 +1,4 @@
-// Loads the three methods and classifies one photo entirely on the phone.
+// BIN: loads the three methods and classifies one photo entirely on the phone.
 // A = HOG + linear SVM (pure JavaScript), B = our CNN, C = MobileNetV3-Large
 // (both ONNX, run with onnxruntime-web / WebAssembly).
 import { resizeLikePIL, toNCHW } from "./imaging.js";
@@ -86,11 +86,11 @@ export async function classify(imageData) {
   return out;
 }
 
-/** The default method = highest macro-F1 on our held-out test set. */
+/** The method whose answer BIN shows: chosen at export time as the one with the best
+ *  macro-F1 on real-world photos (tools/export_mobile.py). */
 export function recommendedMethod() {
-  const r = meta.results;
-  return Object.keys(r).reduce((a, b) => (r[b].macro_f1 > r[a].macro_f1 ? b : a));
+  return meta.recommended;
 }
 
 // exposed for automated verification (tools/verify_web.py)
-window.trashSorter = { loadModels, classify, getMeta };
+window.binApp = { loadModels, classify, getMeta };
