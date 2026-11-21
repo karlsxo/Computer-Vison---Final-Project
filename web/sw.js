@@ -1,12 +1,12 @@
-// Service worker: caches the app and the AI models so Trash Sorter opens instantly
+// Service worker: caches BIN and its AI models so the app opens instantly
 // and works offline after the first visit. Bump VERSION when files change.
-const VERSION = "trash-sorter-v1";
+const VERSION = "bin-v3";
 const SHELL = [
   "./", "index.html", "manifest.webmanifest", "css/app.css",
   "js/app.js", "js/models.js", "js/imaging.js", "js/hog.js", "js/content.js",
   "vendor/ort/ort.wasm.min.js", "vendor/ort/ort-wasm-simd-threaded.mjs", "vendor/ort/ort-wasm-simd-threaded.wasm",
   "models/meta.json", "models/hog_svm.bin", "models/scratch_cnn.onnx", "models/mobilenetv3_large.onnx",
-  "icons/icon-192.png", "icons/icon-512.png",
+  "icons/icon-192.png", "icons/icon-512.png", "icons/logo.svg", "icons/favicon-64.png",
 ];
 
 self.addEventListener("install", (e) => {

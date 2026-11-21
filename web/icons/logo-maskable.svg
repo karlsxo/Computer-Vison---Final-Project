@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="BIN logo">
+  <title>BIN</title>
+  <rect width="512" height="512" fill="#1f8b4c"/><g transform="translate(256 256) scale(0.76) translate(-256 -256)">
+  <g transform="translate(0 -60)">
+    <!-- trash can cover: handle, dome and rim -->
+    <path d="M216 182 V158 a22 22 0 0 1 22 -22 h36 a22 22 0 0 1 22 22 V182" fill="none" stroke="#fff" stroke-width="22" stroke-linecap="round"/>
+    <path d="M94 302 C94 226 168 176 256 176 C344 176 418 226 418 302 Z" fill="#fff"/>
+    <rect x="66" y="290" width="380" height="42" rx="21" fill="#fff"/>
+    <!-- the bin under the cover -->
+    <path d="M108 348 H404 L386 492 a16 16 0 0 1 -16 14 H142 a16 16 0 0 1 -16 -14 Z" fill="#fff"/>
+    <path d="M200 374 V478 M256 374 V478 M312 374 V478" stroke="#1f8b4c" stroke-width="16" stroke-linecap="round"/>
+    <!-- letter B in the centre of the cover, drawn as a path (same on every device) -->
+    <path transform="translate(219.3 210) scale(0.68)" fill="#1f8b4c" fill-rule="evenodd"
+      d="M0 0 H56 C86 0 102 15 102 34 C102 48 94 57 81 61 C97 65 108 77 108 94 C108 114 91 128 60 128 H0 Z
+         M27 22 V53 H52 C66 53 74 46 74 37 C74 28 66 22 52 22 Z
+         M27 74 V106 H56 C72 106 80 99 80 90 C80 80 72 74 56 74 Z"/>
+  </g>
+</g></svg>

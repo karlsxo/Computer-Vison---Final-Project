@@ -1,20 +1,45 @@
 {
- "A": {
-  "agreement_with_python_%": 100.0,
-  "phone_accuracy_%": 52.9,
-  "python_accuracy_%": 52.9,
-  "phone_ms_per_image_desktop_browser": 2.3
- },
- "B": {
-  "agreement_with_python_%": 100.0,
-  "phone_accuracy_%": 71.3,
-  "python_accuracy_%": 71.3,
-  "phone_ms_per_image_desktop_browser": 49.8
- },
- "C": {
-  "agreement_with_python_%": 100.0,
-  "phone_accuracy_%": 92.8,
-  "python_accuracy_%": 92.8,
-  "phone_ms_per_image_desktop_browser": 41.5
+ "source": "mixed",
+ "sets": {
+  "trashnet_test": {
+   "A": {
+    "agreement_with_python_%": 100.0,
+    "phone_accuracy_%": 47.87,
+    "python_accuracy_%": 47.87,
+    "ms_per_image_desktop_browser": 2.7
+   },
+   "B": {
+    "agreement_with_python_%": 100.0,
+    "phone_accuracy_%": 69.68,
+    "python_accuracy_%": 69.68,
+    "ms_per_image_desktop_browser": 83.3
+   },
+   "C": {
+    "agreement_with_python_%": 100.0,
+    "phone_accuracy_%": 94.15,
+    "python_accuracy_%": 94.15,
+    "ms_per_image_desktop_browser": 47.7
+   }
+  },
+  "realworld": {
+   "A": {
+    "agreement_with_python_%": 99.83,
+    "phone_accuracy_%": 47.83,
+    "python_accuracy_%": 47.83,
+    "ms_per_image_desktop_browser": 2.8
+   },
+   "B": {
+    "agreement_with_python_%": 100.0,
+    "phone_accuracy_%": 78.83,
+    "python_accuracy_%": 78.83,
+    "ms_per_image_desktop_browser": 63.0
+   },
+   "C": {
+    "agreement_with_python_%": 100.0,
+    "phone_accuracy_%": 97.67,
+    "python_accuracy_%": 97.67,
+    "ms_per_image_desktop_browser": 52.9
+   }
+  }
  }
 }

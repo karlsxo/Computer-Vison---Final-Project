@@ -1,11 +1,11 @@
-// Text content of the app: material guides, tips and Learn articles.
+// Text content of BIN: what to do with each material and short help articles.
 // Philippine context: RA 9003 requires segregation at source into biodegradable,
-// recyclable and residual waste. The six classes here are the TrashNet classes.
+// recyclable and residual waste. The six classes are the TrashNet classes.
 
 export const MATERIALS = {
   cardboard: {
     emoji: "📦", color: "#b9822f", bin: "recyclable",
-    tip: "Flatten boxes and keep them dry. Wet or greasy cardboard (e.g. pizza boxes) goes to residual.",
+    tip: "Flatten it and keep it dry. Wet or greasy cardboard (e.g. pizza boxes) goes to residual.",
     guide: [
       "Remove tape, foam and plastic wrap.",
       "Flatten boxes to save space in the recycling bin.",
@@ -55,10 +55,10 @@ export const MATERIALS = {
   },
   trash: {
     emoji: "🗑️", color: "#7a6a5a", bin: "residual",
-    tip: "Residual waste. Not recyclable: put it in the residual bin for proper disposal.",
+    tip: "Residual waste: it cannot be recycled. Put it in the residual bin.",
     guide: [
       "Residual waste cannot be recycled or composted.",
-      "Examples: diapers, sanitary products, sachets, used tissue.",
+      "Examples: diapers, sanitary products, sachets, used tissue, styrofoam.",
       "Keep it separate so recyclables stay clean.",
       "Less residual waste means less landfill: choose refillables.",
     ],
@@ -67,16 +67,23 @@ export const MATERIALS = {
 
 export const BIN_LABEL = { recyclable: "Recyclable", residual: "Residual" };
 
-export const TIPS = [
-  ["🚿", "Rinse before you recycle: food leftovers can contaminate a whole bale of recyclables."],
-  ["📦", "Flatten boxes: they take up to 80% less space in the bin."],
-  ["🧴", "Check the number in the recycling triangle: PET (1) and HDPE (2) are the easiest plastics to recycle."],
-  ["🛍️", "Bring your own bag and tumbler: the best waste is the waste you never make."],
-  ["🔋", "Batteries and electronics are special waste: never put them in the regular bins."],
-  ["🌱", "Food scraps belong in the biodegradable bin or your compost, not with recyclables."],
-];
-
 export const ARTICLES = [
+  {
+    id: "photos", emoji: "📸", title: "How to get an accurate answer",
+    summary: "Five habits that make BIN much more reliable.",
+    body: `<ul><li>Photograph <b>one item</b> at a time.</li>
+<li>Fill most of the <b>scanner frame</b> with the item (BIN only looks inside the frame).</li>
+<li>Use a <b>plain background</b>: a table, the floor or a sheet of paper.</li>
+<li>Good light, no strong shadows, hold still to avoid blur.</li>
+<li>Show the material: the surface, the label or the inside of the item.</li></ul>
+<p>When BIN is not confident enough it says <b>"Not sure"</b> instead of guessing. Retake the photo
+closer, from another side, or on a plainer background.</p>`,
+  },
+  {
+    id: "ai", emoji: "🤖", title: "How BIN works",
+    summary: "Three computer-vision methods on your phone.",
+    body: null,   // filled in by app.js with the measured results
+  },
   {
     id: "wishcycling", emoji: "🤔", title: "What is wish-cycling?",
     summary: "Putting things in the recycling bin and hoping for the best.",
@@ -85,8 +92,7 @@ recycled, without checking. It feels good, but it often does harm.</p>
 <ul><li>One greasy box or a bag of food waste can contaminate a whole load of clean paper.</li>
 <li>Sachets, soft plastics and tissues jam sorting machines and end up in landfill anyway.</li>
 <li>Contaminated loads are sometimes rejected completely.</li></ul>
-<p><b>When in doubt, check.</b> Scan the item with this app, read the material guide, and ask your
-barangay MRF what they accept.</p>`,
+<p><b>When in doubt, check.</b> Scan the item with BIN and ask your barangay MRF what they accept.</p>`,
   },
   {
     id: "ra9003", emoji: "⚖️", title: "RA 9003 in one minute",
@@ -98,31 +104,6 @@ waste to be segregated <b>at source</b>: in homes, schools and offices.</p>
 <li><b>Residual:</b> what cannot be recycled or composted.</li>
 <li><b>Special waste:</b> batteries, electronics, paint, medicine.</li></ul>
 <p>Every barangay is supposed to have a <b>Materials Recovery Facility (MRF)</b> where recyclables are
-sorted. This app helps with the recyclable vs. residual decision.</p>`,
+sorted. BIN helps with the recyclable vs. residual decision.</p>`,
   },
-  {
-    id: "ai", emoji: "🤖", title: "How the AI decides",
-    summary: "Three computer-vision methods, compared fairly.",
-    body: null,   // filled in by app.js with the measured results
-  },
-  {
-    id: "photos", emoji: "📸", title: "How to take a good photo",
-    summary: "Get the most accurate answer from the scanner.",
-    body: `<ul><li>Photograph <b>one item</b> at a time.</li>
-<li>Use a <b>plain background</b> (a table, the floor, a sheet of paper).</li>
-<li>Fill most of the scanner frame with the item.</li>
-<li>Good light, no strong shadows; avoid blur.</li></ul>
-<p>The models were trained on photos of single items on a plain background, so messy scenes are harder:
-in our tests the best model scored 92.8% on such photos but about 63% on random web photos. If the answer
-looks wrong, pick the right material on the result screen.</p>`,
-  },
-];
-
-export const BADGES = [
-  { id: "first", emoji: "🌱", name: "First scan", test: (s) => s.items >= 1 },
-  { id: "ten", emoji: "♻️", name: "10 items", test: (s) => s.items >= 10 },
-  { id: "allsix", emoji: "🌈", name: "All 6 materials", test: (s) => s.kinds >= 6 },
-  { id: "century", emoji: "💯", name: "100 points", test: (s) => s.points >= 100 },
-  { id: "fifty", emoji: "🏅", name: "50 items", test: (s) => s.items >= 50 },
-  { id: "level5", emoji: "🏆", name: "Level 5", test: (s) => s.level >= 5 },
 ];
