@@ -1,0 +1,35 @@
+=== Method A: HOG + linear SVM (NumPy) ===
+Sanity checks ...
+  synthetic: {'vertical bar': True, 'horizontal bar': True, 'diagonal edge': True}
+  skimage_reference: {'max_abs_diff': 1.0485703799689716e-07, 'min_correlation': 0.9999999999999972, 'n_images': 8, 'pass': True}
+  toy_svm: {'train_accuracy': 100.0, 'pass': True}
+Tuning HOG + SVM on the validation split ...
+  cfg={'cell': 8, 'block': 2, 'nbins': 9, 'soft': True, 'color': False} lam=1 dim=8100 val_acc=54.1 val_F1=0.536
+  cfg={'cell': 8, 'block': 2, 'nbins': 9, 'soft': True, 'color': False} lam=3 dim=8100 val_acc=57.0 val_F1=0.553
+  cfg={'cell': 8, 'block': 2, 'nbins': 9, 'soft': True, 'color': False} lam=10 dim=8100 val_acc=60.2 val_F1=0.589
+  cfg={'cell': 8, 'block': 2, 'nbins': 9, 'soft': True, 'color': False} lam=30 dim=8100 val_acc=61.5 val_F1=0.590
+  cfg={'cell': 8, 'block': 2, 'nbins': 9, 'soft': True, 'color': False} lam=100 dim=8100 val_acc=56.7 val_F1=0.536
+  cfg={'cell': 8, 'block': 2, 'nbins': 9, 'soft': False, 'color': False} lam=1 dim=8100 val_acc=53.3 val_F1=0.509
+  cfg={'cell': 8, 'block': 2, 'nbins': 9, 'soft': False, 'color': False} lam=3 dim=8100 val_acc=57.5 val_F1=0.563
+  cfg={'cell': 8, 'block': 2, 'nbins': 9, 'soft': False, 'color': False} lam=10 dim=8100 val_acc=59.9 val_F1=0.583
+  cfg={'cell': 8, 'block': 2, 'nbins': 9, 'soft': False, 'color': False} lam=30 dim=8100 val_acc=59.6 val_F1=0.569
+  cfg={'cell': 8, 'block': 2, 'nbins': 9, 'soft': False, 'color': False} lam=100 dim=8100 val_acc=54.9 val_F1=0.520
+  cfg={'cell': 16, 'block': 2, 'nbins': 9, 'soft': True, 'color': False} lam=1 dim=1764 val_acc=57.3 val_F1=0.548
+  cfg={'cell': 16, 'block': 2, 'nbins': 9, 'soft': True, 'color': False} lam=3 dim=1764 val_acc=57.0 val_F1=0.548
+  cfg={'cell': 16, 'block': 2, 'nbins': 9, 'soft': True, 'color': False} lam=10 dim=1764 val_acc=54.9 val_F1=0.520
+  cfg={'cell': 16, 'block': 2, 'nbins': 9, 'soft': True, 'color': False} lam=30 dim=1764 val_acc=53.8 val_F1=0.509
+  cfg={'cell': 16, 'block': 2, 'nbins': 9, 'soft': True, 'color': False} lam=100 dim=1764 val_acc=51.5 val_F1=0.478
+  cfg={'cell': 16, 'block': 2, 'nbins': 9, 'soft': False, 'color': False} lam=1 dim=1764 val_acc=55.9 val_F1=0.534
+  cfg={'cell': 16, 'block': 2, 'nbins': 9, 'soft': False, 'color': False} lam=3 dim=1764 val_acc=56.7 val_F1=0.542
+  cfg={'cell': 16, 'block': 2, 'nbins': 9, 'soft': False, 'color': False} lam=10 dim=1764 val_acc=55.9 val_F1=0.528
+  cfg={'cell': 16, 'block': 2, 'nbins': 9, 'soft': False, 'color': False} lam=30 dim=1764 val_acc=55.1 val_F1=0.519
+  cfg={'cell': 16, 'block': 2, 'nbins': 9, 'soft': False, 'color': False} lam=100 dim=1764 val_acc=52.5 val_F1=0.488
+Selected: {'cfg': {'cell': 8, 'block': 2, 'nbins': 9, 'soft': True, 'color': False}, 'lam': 30.0, 'val_acc': 61.477572559366756, 'val_macro_f1': 0.5896443548328932, 'dim': 8100, 'train_time_s': 15.756541699985974}
+TEST accuracy=52.93%  macro-F1=0.5187  runtime=3.57 ms/img (CPU)  train=0.31 min
+Variant: HOG + HSV colour histogram ...
+  cfg={'cell': 8, 'block': 2, 'nbins': 9, 'soft': True, 'color': True} lam=1 dim=8292 val_acc=65.2 val_F1=0.629
+  cfg={'cell': 8, 'block': 2, 'nbins': 9, 'soft': True, 'color': True} lam=3 dim=8292 val_acc=67.0 val_F1=0.650
+  cfg={'cell': 8, 'block': 2, 'nbins': 9, 'soft': True, 'color': True} lam=10 dim=8292 val_acc=65.7 val_F1=0.633
+  cfg={'cell': 8, 'block': 2, 'nbins': 9, 'soft': True, 'color': True} lam=30 dim=8292 val_acc=65.2 val_F1=0.627
+  cfg={'cell': 8, 'block': 2, 'nbins': 9, 'soft': True, 'color': True} lam=100 dim=8292 val_acc=61.2 val_F1=0.582
+VARIANT TEST accuracy=59.57%  macro-F1=0.5867 runtime=13.63 ms

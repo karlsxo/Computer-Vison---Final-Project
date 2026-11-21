@@ -1,0 +1,46 @@
+{
+  "A": {
+    "name": "HOG + linear SVM",
+    "accuracy": 52.92553191489362,
+    "macro_f1": 0.5187228635909843,
+    "runtime_ms_cpu": 3.5747669998090714,
+    "params_M": 0.0,
+    "train_time_min": 0.30888973666684855,
+    "train_device": "cpu (NumPy)",
+    "acc_per_ms": 14.80530952582934,
+    "model_size_MB": 0.260936
+  },
+  "A+": {
+    "name": "HOG + colour hist. + SVM (variant)",
+    "accuracy": 59.57446808510638,
+    "macro_f1": 0.5866550583171913,
+    "runtime_ms_cpu": 13.633326500130352,
+    "params_M": 0.0,
+    "train_time_min": 0.47662420000027245,
+    "train_device": "cpu (NumPy)",
+    "acc_per_ms": 4.369767575399648,
+    "model_size_MB": 0.267076
+  },
+  "B": {
+    "name": "4-block CNN (scratch)",
+    "accuracy": 71.27659574468085,
+    "macro_f1": 0.6942769909409644,
+    "runtime_ms_cpu": 16.821224500017706,
+    "params_M": 1.128486,
+    "train_time_min": 100.81359102833376,
+    "train_device": "cpu",
+    "acc_per_ms": 4.237301258574001,
+    "model_size_MB": 4.513944
+  },
+  "C": {
+    "name": "MobileNetV3-Large (pretrained)",
+    "accuracy": 92.81914893617021,
+    "macro_f1": 0.9261265944185494,
+    "runtime_ms_cpu": 29.0744330000598,
+    "params_M": 4.209718,
+    "train_time_min": 44.797618931666754,
+    "train_device": "cpu",
+    "acc_per_ms": 3.192466347872693,
+    "model_size_MB": 16.838872
+  }
+}

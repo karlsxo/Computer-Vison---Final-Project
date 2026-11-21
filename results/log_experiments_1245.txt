@@ -1,0 +1,30 @@
+
+=== Experiment 1: main comparison on the TrashNet test split ===
+  HOG + linear SVM                       acc  52.93% [47.6, 58.0]  macro-F1 0.5187
+  4-block CNN (scratch)                  acc  71.28% [66.5, 75.8]  macro-F1 0.6943
+  MobileNetV3-Large (pretrained)         acc  92.82% [90.2, 95.2]  macro-F1 0.9261
+  HOG + colour hist. + SVM (variant)     acc  59.57% [54.8, 64.6]  macro-F1 0.5867
+  McNemar C_vs_B: p = 1.70e-17
+  McNemar C_vs_A: p = 8.13e-39
+  McNemar B_vs_A: p = 8.60e-09
+  McNemar A+_vs_A: p = 4.63e-03
+
+=== Experiment 2: domain shift (studio -> real-world web photos) ===
+  [realworld] HOG + linear SVM                       acc   9.33%  F1 0.084  (drop +43.6 pts)
+  [realworld] HOG + colour hist. + SVM (variant)     acc  16.50%  F1 0.152  (drop +43.1 pts)
+  [realworld] 4-block CNN (scratch)                  acc  36.17%  F1 0.326  (drop +35.1 pts)
+  [realworld] MobileNetV3-Large (pretrained)         acc  62.83%  F1 0.582  (drop +30.0 pts)
+
+=== Experiment 4: efficiency ===
+  HOG + linear SVM                          3.57 ms   0.000 M params     0.3 min train  size 0.26 MB
+  HOG + colour hist. + SVM (variant)       13.63 ms   0.000 M params     0.5 min train  size 0.27 MB
+  4-block CNN (scratch)                    16.82 ms   1.128 M params   100.8 min train  size 4.51 MB
+  MobileNetV3-Large (pretrained)           29.07 ms   4.210 M params    44.8 min train  size 16.84 MB
+
+=== Experiment 5: error analysis ===
+  HOG + linear SVM top confusions: glass->metal (15), plastic->cardboard (13), plastic->paper (10), glass->paper (10)
+  4-block CNN (scratch) top confusions: plastic->glass (10), paper->trash (9), plastic->paper (8), paper->metal (8)
+  MobileNetV3-Large (pretrained) top confusions: cardboard->paper (5), plastic->glass (4), glass->metal (4), glass->plastic (3)
+  agreement: {'all_correct': 159, 'all_wrong': 13, 'only_C_correct': 57, 'C_wrong_but_B_or_A_right': 14, 'A_right_C_wrong': 6, 'n': 376}
+
+Done in 0.8 min

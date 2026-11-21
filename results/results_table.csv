@@ -1,0 +1,5 @@
+method,slot,accuracy,acc_lo,acc_hi,macro_f1,runtime_ms_cpu,params_M,train_time_min
+HOG + linear SVM,A. Classical,52.93,47.61,57.98,0.5187,3.57,0.000,0.31
+4-block CNN (scratch),B. From scratch,71.28,66.49,75.80,0.6943,16.82,1.128,100.81
+MobileNetV3-Large (pretrained),C. Pretrained,92.82,90.16,95.21,0.9261,29.07,4.210,44.80
+HOG + colour hist. + SVM (variant),A. (variant),59.57,54.79,64.63,0.5867,13.63,0.000,0.48

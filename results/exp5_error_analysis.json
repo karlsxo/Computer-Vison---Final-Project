@@ -1,0 +1,94 @@
+{
+  "top_confusions": {
+    "A": [
+      {
+        "true": "glass",
+        "pred": "metal",
+        "count": 15
+      },
+      {
+        "true": "plastic",
+        "pred": "cardboard",
+        "count": 13
+      },
+      {
+        "true": "plastic",
+        "pred": "paper",
+        "count": 10
+      },
+      {
+        "true": "glass",
+        "pred": "paper",
+        "count": 10
+      },
+      {
+        "true": "plastic",
+        "pred": "metal",
+        "count": 9
+      }
+    ],
+    "B": [
+      {
+        "true": "plastic",
+        "pred": "glass",
+        "count": 10
+      },
+      {
+        "true": "paper",
+        "pred": "trash",
+        "count": 9
+      },
+      {
+        "true": "plastic",
+        "pred": "paper",
+        "count": 8
+      },
+      {
+        "true": "paper",
+        "pred": "metal",
+        "count": 8
+      },
+      {
+        "true": "glass",
+        "pred": "plastic",
+        "count": 8
+      }
+    ],
+    "C": [
+      {
+        "true": "cardboard",
+        "pred": "paper",
+        "count": 5
+      },
+      {
+        "true": "plastic",
+        "pred": "glass",
+        "count": 4
+      },
+      {
+        "true": "glass",
+        "pred": "metal",
+        "count": 4
+      },
+      {
+        "true": "glass",
+        "pred": "plastic",
+        "count": 3
+      },
+      {
+        "true": "plastic",
+        "pred": "trash",
+        "count": 2
+      }
+    ]
+  },
+  "agreement": {
+    "all_correct": 159,
+    "all_wrong": 13,
+    "only_C_correct": 57,
+    "C_wrong_but_B_or_A_right": 14,
+    "A_right_C_wrong": 6,
+    "n": 376
+  },
+  "majority_vote_accuracy": 87.7659574468085
+}

@@ -1,0 +1,48 @@
+=== Method B: 4-block CNN from scratch (device: cpu) ===
+TrashCNN(
+  (features): Sequential(
+    (0): Sequential(
+      (0): Conv2d(3, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (1): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+      (2): ReLU(inplace=True)
+      (3): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+    )
+    (1): Sequential(
+      (0): Conv2d(32, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+      (2): ReLU(inplace=True)
+      (3): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+    )
+    (2): Sequential(
+      (0): Conv2d(64, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+      (2): ReLU(inplace=True)
+      (3): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (4): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+      (5): ReLU(inplace=True)
+      (6): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+    )
+    (3): Sequential(
+      (0): Conv2d(128, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (1): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+      (2): ReLU(inplace=True)
+      (3): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (4): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+      (5): ReLU(inplace=True)
+      (6): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+    )
+  )
+  (pool): AdaptiveAvgPool2d(output_size=1)
+  (dropout): Dropout(p=0.4, inplace=False)
+  (fc): Linear(in_features=256, out_features=6, bias=True)
+)
+Parameters: 1.128 M
+  [cnn] ep   1 (full) train_loss 1.710 train_acc  33.3 | val_loss 1.547 val_acc  34.3 val_F1 0.312  *  (102s)
+  [cnn] ep   2 (full) train_loss 1.645 train_acc  36.2 | val_loss 1.505 val_acc  39.8 val_F1 0.358  *  (206s)
+  [cnn] ep   3 (full) train_loss 1.606 train_acc  39.5 | val_loss 1.366 val_acc  50.1 val_F1 0.475  *  (308s)
+  [cnn] ep   5 (full) train_loss 1.588 train_acc  40.8 | val_loss 1.389 val_acc  42.2 val_F1 0.402  (540s)
+  [cnn] ep  10 (full) train_loss 1.535 train_acc  44.4 | val_loss 1.319 val_acc  46.7 val_F1 0.443  (1105s)
+  [cnn] ep  11 (full) train_loss 1.516 train_acc  44.5 | val_loss 1.275 val_acc  49.6 val_F1 0.478  *  (1211s)
+  [cnn] ep  13 (full) train_loss 1.522 train_acc  45.0 | val_loss 1.237 val_acc  50.4 val_F1 0.490  *  (1438s)
+  [cnn] ep  14 (full) train_loss 1.499 train_acc  46.9 | val_loss 1.198 val_acc  51.5 val_F1 0.509  *  (1560s)
+  [cnn] ep  15 (full) train_loss 1.479 train_acc  46.7 | val_loss 1.168 val_acc  53.3 val_F1 0.501  (1673s)

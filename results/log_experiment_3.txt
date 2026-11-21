@@ -1,0 +1,13 @@
+
+=== Experiment 3: small-data regime ===
+  n= 10/class  HOG + linear SVM                   acc  36.70%  F1 0.357  (0.1 min)
+  n= 10/class  4-block CNN (scratch)              acc  43.35%  F1 0.430  (15.7 min)
+  n= 10/class  MobileNetV3-Large (pretrained)     acc  67.55%  F1 0.663  (11.9 min)
+  n= 25/class  HOG + linear SVM                   acc  35.37%  F1 0.358  (0.1 min)
+  n= 25/class  4-block CNN (scratch)              acc  58.78%  F1 0.578  (15.6 min)
+  n= 25/class  MobileNetV3-Large (pretrained)     acc  75.53%  F1 0.734  (13.3 min)
+  n= 50/class  HOG + linear SVM                   acc  40.96%  F1 0.409  (0.1 min)
+  n= 50/class  4-block CNN (scratch)              acc  61.44%  F1 0.599  (15.2 min)
+  n= 50/class  MobileNetV3-Large (pretrained)     acc  83.78%  F1 0.819  (14.3 min)
+
+Done in 86.3 min

@@ -1,0 +1,12 @@
+=== Method C: MobileNetV3-large pretrained + fine-tuned (device: cpu) ===
+  [mnv3] ep   1 (head) train_loss 1.066 train_acc  66.8 | val_loss 0.490 val_acc  82.1 val_F1 0.792  *  (106s)
+  [mnv3] ep   2 (head) train_loss 0.723 train_acc  83.6 | val_loss 0.423 val_acc  87.6 val_F1 0.863  *  (212s)
+  [mnv3] ep   3 (head) train_loss 0.687 train_acc  85.4 | val_loss 0.405 val_acc  88.7 val_F1 0.869  *  (315s)
+  [mnv3] ep   5 (full) train_loss 0.564 train_acc  90.2 | val_loss 0.341 val_acc  89.4 val_F1 0.893  *  (701s)
+  [mnv3] ep   6 (full) train_loss 0.452 train_acc  95.4 | val_loss 0.201 val_acc  95.0 val_F1 0.942  *  (898s)
+  [mnv3] ep   7 (full) train_loss 0.404 train_acc  97.2 | val_loss 0.229 val_acc  95.0 val_F1 0.948  *  (1100s)
+  [mnv3] ep   9 (full) train_loss 0.360 train_acc  99.1 | val_loss 0.154 val_acc  97.4 val_F1 0.974  *  (1496s)
+  [mnv3] ep  10 (full) train_loss 0.355 train_acc  99.3 | val_loss 0.163 val_acc  96.6 val_F1 0.965  (1703s)
+  [mnv3] ep  15 (full) train_loss 0.319 train_acc  99.9 | val_loss 0.167 val_acc  96.6 val_F1 0.960  (2688s)
+  [mnv3] early stop at epoch 15 (best epoch 9)
+TEST accuracy=92.82%  macro-F1=0.9261  runtime CPU=29.07 ms  params=4.210 M (trainable 4.201 M)  train=44.8 min (device cpu)
