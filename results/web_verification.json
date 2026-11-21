@@ -1,0 +1,20 @@
+{
+ "A": {
+  "agreement_with_python_%": 100.0,
+  "phone_accuracy_%": 52.9,
+  "python_accuracy_%": 52.9,
+  "phone_ms_per_image_desktop_browser": 2.3
+ },
+ "B": {
+  "agreement_with_python_%": 100.0,
+  "phone_accuracy_%": 71.3,
+  "python_accuracy_%": 71.3,
+  "phone_ms_per_image_desktop_browser": 49.8
+ },
+ "C": {
+  "agreement_with_python_%": 100.0,
+  "phone_accuracy_%": 92.8,
+  "python_accuracy_%": 92.8,
+  "phone_ms_per_image_desktop_browser": 41.5
+ }
+}

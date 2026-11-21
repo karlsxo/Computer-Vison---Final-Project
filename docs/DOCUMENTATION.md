@@ -376,7 +376,33 @@ before deployment it should be fine-tuned on local photos, with "trash" defined 
 
 ---
 
-## 12. Deliverables map
+## 11. Phone app (`web/`)
+
+A Progressive Web App that runs **all three methods on the phone**, designed after the group's mock-up
+(green header, rounded cards, bottom bar with a centre scan button, scanner frame, stats donut, profile).
+
+* **URL:** https://karlsxo.github.io/Computer-Vison---Final-Project/ — open it in Chrome (Android) or Safari (iPhone), then *Add to Home Screen*.
+* **Input:** live camera with a scanner frame (the photo is cropped to the frame, so the item fills the
+  image like the training photos), the phone's camera app, or the gallery. EXIF orientation is applied.
+* **Output:** material + recyclable/residual, the three methods' labels, confidences and on-phone runtimes,
+  the recommended method (highest test macro-F1, read from `web/models/meta.json`) with its measured
+  reason, a disposal tip, and a "Not right? choose the material" correction.
+* **Extras:** history with thumbnails, points (+10 recyclable, +5 residual) and levels, stats donut,
+  badges, editable name, Learn guides/articles (wish-cycling, RA 9003, how the AI decides, photo tips).
+  Everything is stored only on the phone (localStorage); no photo is uploaded.
+* **How the models run:** `tools/export_mobile.py` exports B and C to ONNX (opset 17) with
+  normalisation and softmax inside the graph (max difference to PyTorch 3·10⁻⁶, 100 % same predictions)
+  and A's SVM weights + standardisation to a 259 kB binary; HOG is re-implemented in `web/js/hog.js`.
+  onnxruntime-web 1.20.1 (WebAssembly) is bundled in `web/vendor/ort/`.
+* **Exact preprocessing:** `web/js/imaging.js` re-implements Pillow's BILINEAR resize (anti-aliased
+  triangle filter, 22-bit fixed-point, horizontal then vertical pass), because a plain canvas resize
+  gives slightly different pixels.
+* **Verification:** `tools/verify_web.py` runs the phone pipeline in a headless browser on all 376 test
+  images: agreement with Python = **100 % for A, B and C** (accuracy 52.9 / 71.3 / 92.8 %).
+* **Offline:** a service worker (`web/sw.js`) caches the app and models (~32 MB) after the first visit.
+* **Tested** in an emulated phone (390×844) with a fake camera: every screen and flow, no JS errors.
+
+
 
 | Deliverable | File |
 |---|---|

@@ -49,7 +49,25 @@ slides [report/Trash_Sorting_Slides.pptx](report/Trash_Sorting_Slides.pptx) ·
 executed notebook [notebooks/CV_Project.ipynb](notebooks/CV_Project.ipynb) ·
 table [results/results_table.md](results/results_table.md).
 
-## Folder layout
+## 📱 Phone app
+
+**Open on your phone: <https://karlsxo.github.io/Computer-Vison---Final-Project/>** (then *Add to Home Screen* to install it like an app).
+
+Take a photo with the camera (live scanner frame) or upload one from the gallery. All three methods
+classify it **on the phone itself** (no server, photos never leave the device, works offline after the
+first visit): the app shows the material, whether it is *recyclable* or *residual*, what each method
+predicted with its confidence and runtime, the recommended method with the reason, and a disposal tip.
+Sorted items earn points and levels, and are shown in a stats donut; a Learn section has material guides
+and short articles.
+
+* Method A (HOG + SVM) is ported to JavaScript (`web/js/hog.js`); methods B and C run as ONNX models with
+  onnxruntime-web (`tools/export_mobile.py` exports them with the normalisation built in).
+* `web/js/imaging.js` re-implements Pillow's bilinear resize exactly, so the phone feeds the networks the
+  same pixels as Python. **Verified:** on all 376 test images the phone app agrees 100% with the Python
+  models for all three methods (`tools/verify_web.py`, `results/web_verification.json`).
+* Source: [`web/`](web). Run locally: `python -m http.server 8000 --directory web`.
+
+
 
 ```
 src/
