@@ -546,6 +546,7 @@ and a profile; these were **removed** so that the app focuses only on recognisin
 | Contribution statement incl. AI disclosure | `report/Contribution_Statement.md` |
 | Application (system build) | BIN phone app `web/` (live link above) and desktop app `app/app.py` |
 | Results table | `results/results_table.md` / `.csv`; Experiment 6: `results/exp6_mixed_domain.json` |
+| User guide for BIN (open, install, use, troubleshoot) | `HOW_TO_USE_BIN.md` |
 
 ## 13. AI-assistance disclosure (required by the brief)
 An AI coding assistant (Claude) was used to help write and debug the code, run the experiments

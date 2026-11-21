@@ -25,6 +25,8 @@ identifies a piece of trash from a photo.
 
 **<https://karlsxo.github.io/Computer-Vison---Final-Project/>** → allow the camera → *Add to Home Screen*.
 
+📖 **Step-by-step instructions: [HOW_TO_USE_BIN.md](HOW_TO_USE_BIN.md)** (opening, installing, using, troubleshooting).
+
 BIN **opens straight to the camera**: put one piece of trash in the frame and tap *Identify* (or pick a
 photo from the gallery). All three methods run **on the phone** (no server; photos never leave the
 device; works offline after the first visit). BIN answers with the best method — MobileNetV3, the most
