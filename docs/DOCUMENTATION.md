@@ -532,8 +532,9 @@ and a profile; these were **removed** so that the app focuses only on recognisin
 * **Exact preprocessing:** `web/js/imaging.js` re-implements Pillow's BILINEAR resize (anti-aliased
   triangle filter, 22-bit fixed point, horizontal then vertical pass), because a plain canvas resize gives
   slightly different pixels than the ones the models were trained on. EXIF orientation is applied.
-* **Scanner crop:** a live-camera photo is cropped to the square scanner frame, so the item fills the
-  picture like in the training photos (uploads are used whole).
+* **Scanner crop:** the scan area is the largest square that fits the camera view; everything outside it
+  is darkened, so the user sees exactly what is scanned. A live-camera photo is cropped to that square
+  (square, so it is not distorted when resized for the models; uploads are used whole).
 * **Offline and updates:** a service worker (`web/sw.js`) caches the app and models (~32 MB) after the
   first visit; changing its `VERSION` makes phones download the new version and reload once.
 * **Privacy:** photos are processed on the phone and never uploaded; history uses `localStorage`.

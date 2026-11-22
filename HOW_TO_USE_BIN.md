@@ -39,7 +39,8 @@ full screen, without the browser bar, straight to the camera.
 
 BIN opens directly on the camera.
 
-1. Put **one** piece of trash **inside the white frame** so that it fills most of the frame.
+1. Put **one** piece of trash **inside the bright square** so that it fills most of it. Only the bright
+   square is scanned; the darkened area around it is ignored.
 2. Use a **plain background** (floor, table, a sheet of paper) and **good light**.
 3. Tap the big green **Identify** button.
 
