@@ -496,11 +496,9 @@ models and the same rules**:
    (front/back camera). If the live camera is not available (no permission, or not https), the Identify
    button opens the phone's own camera app instead, so photos can always be taken.
 2. **Result:** the photo with the answer band, the material with its emoji and a *Recyclable* / *Residual*
-   chip and the confidence; *What to do* and handling steps; *Not right? Pick the material* (corrects the
-   saved result); *All three methods* (label, confidence bar, runtime on this phone, ★ method, the reason
+   chip and the confidence; *What to do* and handling steps; *All three methods* (label, confidence bar, runtime on this phone, ★ method, the reason
    for the default and whether the methods agree); and a large **Scan next item** button.
-3. **Scan history** (button at the top of the camera): thumbnails, material, sure / not sure /
-   corrected, time; delete or clear. Stored only on the phone.
+3. **Scan history** (button at the top of the camera): thumbnails, material, sure / not sure, time; delete or clear. Stored only on the phone.
 4. **About BIN:** the logo, help articles (*How to get an accurate answer*, *How BIN works* with the
    measured accuracy of each method, *What is wish-cycling?*, *RA 9003 in one minute*), the six material
    guides, a privacy note and a link to this repository.

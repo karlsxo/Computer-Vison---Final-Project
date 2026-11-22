@@ -32,7 +32,7 @@ photo from the gallery). All three methods run **on the phone** (no server; phot
 device; works offline after the first visit). BIN answers with the best method — MobileNetV3, the most
 accurate on real-world photos — or says **"Not sure"** when its confidence is below the calibrated
 threshold, shows whether the item is *recyclable* or *residual* and what to do with it, and lists every
-method's prediction, confidence and runtime. A wrong answer can be corrected; scans are kept in a history.
+method's prediction, confidence and runtime. Scans are kept in a history.
 
 * The app is in [`web/`](web): HOG + SVM is ported to JavaScript (`web/js/hog.js`); the CNN and
   MobileNetV3 run as ONNX models with onnxruntime-web; `web/js/imaging.js` reproduces Pillow's resize

@@ -292,7 +292,7 @@ JavaScript (a line-by-line port of our NumPy code) and the two networks as ONNX 
 <b>Output drawn on the input:</b> the answer (or NOT SURE) over the photo, recyclable or residual, what to do with the
 item, and every method's label, confidence and runtime on the phone. <b>Recommendation:</b> BIN answers with the method
 that has the best macro-F1 on real-world photos (MobileNetV3-Large (pretrained)), explains why with the measured numbers, and says "not sure"
-below the calibrated threshold. The user can correct a wrong answer; scans are kept in a history on the phone. Photos
+below the calibrated threshold, asking for a new photo instead of guessing; scans are kept in a history on the phone. Photos
 never leave the device and the app works offline after the first visit (about 32 MB). <b>Verification:</b> the app's own
 code was run in a headless browser on all 976 test photos and compared with the Python models: the predictions agree on
 100% of them for both networks and on at least 99.8% for HOG + SVM (one real-world image decodes slightly

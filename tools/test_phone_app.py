@@ -1,8 +1,7 @@
 """End-to-end test of the BIN phone app in an emulated phone (390x844) with a fake camera.
 
 Serves web/ locally, opens the app with no route (it must start on the scanner with the
-camera running), identifies a fake-camera frame and an uploaded photo, corrects a
-result, and visits history, about and the help pages. Fails on any JavaScript error.
+camera running), identifies a fake-camera frame and an uploaded photo, and visits history, about and the help pages. Fails on any JavaScript error.
 Screenshots are written to the folder given as the first argument.
 
 Run:  python tools/test_phone_app.py <screenshot-folder>
@@ -49,14 +48,12 @@ def main():
         pg.set_input_files("#galleryInput", str(ROOT / "app" / "examples" / "metal.jpg"))
         pg.wait_for_url("**#/result", timeout=60000); pg.wait_for_timeout(500)
         pg.screenshot(path=str(OUT / "3_result_upload.png"), full_page=True)
-        pg.click("[data-pick=plastic]"); pg.wait_for_timeout(300)
-        assert "chosen by you" in pg.inner_text(".verdict")
-        pg.screenshot(path=str(OUT / "4_result_corrected.png"), full_page=True)
+        assert pg.locator("[data-pick]").count() == 0       # BIN decides the material; no manual picking
         for page, name in [("#/history", "5_history"), ("#/about", "6_about"), ("#/about/a/ai", "7_how_bin_works"),
                            ("#/about/m/glass", "8_material")]:
             pg.goto(base + page); pg.wait_for_timeout(500)
             pg.screenshot(path=str(OUT / f"{name}.png"), full_page=True)
-        assert pg.evaluate("JSON.parse(localStorage.getItem('bin.history.v1')).length") == 2
+        assert pg.evaluate("JSON.parse(localStorage.getItem('bin.history.v1')).length") == 2   # both scans saved
         sw = pg.evaluate("navigator.serviceWorker.getRegistration().then(r => !!(r && r.active))")
         b.close()
     srv.shutdown()

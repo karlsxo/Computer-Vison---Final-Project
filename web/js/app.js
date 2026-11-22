@@ -238,40 +238,33 @@ function reasonText(rec) {
 function result() {
   if (!current) { go("#/scan"); return; }
   const { res, entry } = current, rec = res.recommended, top = res[rec];
-  const chosen = entry.label, m = MATERIALS[chosen], corrected = chosen !== entry.predicted;
+  // BIN classifies the material itself: the answer is the recommended method's label,
+  // or "Not sure" (retake the photo) when its confidence is below the calibrated threshold.
+  const m = MATERIALS[top.label];
   const agree = new Set(["A", "B", "C"].map((k) => res[k].label)).size === 1;
-  const verdict = entry.sure || corrected
+  const verdict = entry.sure
     ? `<div class="verdict"><div class="emoji">${m.emoji}</div><div>
-         <h2>${chosen}</h2><span class="chip ${m.bin}">${BIN_LABEL[m.bin]}</span>
-         <span class="muted small"> ${corrected ? "chosen by you" : `${pct(top.confidence)} sure`}</span></div></div>`
+         <h2>${top.label}</h2><span class="chip ${m.bin}">${BIN_LABEL[m.bin]}</span>
+         <span class="muted small"> ${pct(top.confidence)} sure</span></div></div>`
     : `<div class="verdict unsure"><div class="emoji">🤔</div><div>
          <h2>Not sure</h2><span class="muted small">Best guess: <b>${top.label}</b> (${pct(top.confidence)})</span></div></div>
        <p class="small" style="margin:10px 0 0">BIN is not confident enough to answer. Retake the photo: one item filling the
-       frame, a plain background and good light. Or pick the material below.</p>`;
+       frame, a plain background and good light.</p>`;
   view().innerHTML = `
   ${header("Result")}
   <main class="content with-cta">
     <div class="photo"><img src="${current.photo}" alt="Your photo">
-      <div class="band">${entry.sure || corrected ? chosen.toUpperCase() : "NOT SURE"}</div></div>
+      <div class="band">${entry.sure ? top.label.toUpperCase() : "NOT SURE"}</div></div>
     <div class="card" style="margin-top:12px">${verdict}
-      ${entry.sure || corrected ? `<p class="small" style="margin:12px 0 0"><b>What to do:</b> ${m.tip}</p>
+      ${entry.sure ? `<p class="small" style="margin:12px 0 0"><b>What to do:</b> ${m.tip}</p>
         <ul class="small guide">${m.guide.map((g) => `<li>${g}</li>`).join("")}</ul>` : ""}
     </div>
-    <div class="section-title">Not right? Pick the material</div>
-    <div class="card"><div class="picks">${getMeta().classes.map((c) =>
-      `<button class="chip pick ${corrected && c === chosen ? "on" : ""}" data-pick="${c}">${MATERIALS[c].emoji} ${cap(c)}</button>`).join("")}</div></div>
     <div class="section-title">All three methods</div>
     <div class="card">${["A", "B", "C"].map((k) => methodRow(k, res[k], k === rec)).join("")}
       <p class="muted small" style="margin:10px 0 0">${agree ? "All three methods agree." : "The methods disagree; BIN uses the starred method."}
       ${reasonText(rec)} Times measured on this phone.</p></div>
   </main>
   <div class="cta"><button class="btn" onclick="location.hash='#/scan'">${icon("camera")}Scan next item</button></div>`;
-  document.querySelectorAll("[data-pick]").forEach((b) => b.addEventListener("click", () => {
-    entry.label = b.dataset.pick;
-    const h = history.find((x) => x.id === entry.id);
-    if (h) { h.label = entry.label; saveHistory(); }
-    result();
-  }));
 }
 
 function methodRow(k, r, isRec) {
@@ -292,10 +285,10 @@ function historyPage() {
     <div class="card">${items.length ? items.map((h) => {
       const m = MATERIALS[h.label], d = new Date(h.ts);
       return `<div class="item-row"><img class="thumb" src="${h.thumb}" alt="">
-        <div class="meta"><b>${m.emoji} ${h.sure || h.label !== h.predicted ? h.label : `${h.label}?`}</b>
+        <div class="meta"><b>${m.emoji} ${h.sure ? h.label : `${h.label}?`}</b>
           <span class="chip ${m.bin}">${BIN_LABEL[m.bin]}</span>
           <div class="muted small">${d.toLocaleDateString()} ${d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-          · ${h.label !== h.predicted ? "corrected by you" : h.sure ? `${pct(h.confidence)} sure` : "not sure"}</div></div>
+          · ${h.sure ? `${pct(h.confidence)} sure` : "not sure"}</div></div>
         <button class="del" data-del="${h.id}" aria-label="Delete">${icon("del")}</button></div>`;
     }).join("") : `<div class="empty"><div class="big">📷</div>No scans yet.</div>`}</div>
     ${items.length ? `<button class="btn ghost" id="clear" style="margin-top:14px">Clear history</button>` : ""}

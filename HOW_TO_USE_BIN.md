@@ -59,8 +59,6 @@ Other buttons on the camera screen:
 * **"Not sure"** — BIN only answers when it is confident enough (65 % or more). Otherwise it shows
   its best guess and asks you to retake the photo: closer, from another side, with better light or
   a plainer background.
-* **Not right? Pick the material** — if BIN is wrong, tap the correct material; the result and
-  your history are corrected and you see the right disposal advice.
 * **All three methods** — the predictions of the three computer-vision methods of the project
   (HOG + SVM, our CNN, MobileNetV3) with their confidence and the time they took on your phone.
   BIN answers with the ★ method, MobileNetV3, the most accurate on real-world photos.
