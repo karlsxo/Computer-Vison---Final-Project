@@ -1,6 +1,6 @@
 // Service worker: caches BIN and its AI models so the app opens instantly
 // and works offline after the first visit. Bump VERSION when files change.
-const VERSION = "bin-v3";
+const VERSION = "bin-v4";
 const SHELL = [
   "./", "index.html", "manifest.webmanifest", "css/app.css",
   "js/app.js", "js/models.js", "js/imaging.js", "js/hog.js", "js/content.js",
