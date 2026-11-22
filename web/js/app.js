@@ -319,18 +319,7 @@ function comparisonTable(res, rec) {
       <th>Metric 2<br><small>Macro-F1</small></th><th>Runtime (ms)<br><small>phone CPU</small></th>
       <th>Params (M)</th><th>Train time (min)</th></tr></thead>
     <tbody>${rows}</tbody></table></div>
-    <div class="swipe-hint" id="swipe-hint">swipe the table sideways to see all columns ›</div>
-    <ul class="small notes">
-      <li><b>Metric 1 – Top-1 accuracy:</b> the share of photos whose material was predicted correctly (first guess).</li>
-      <li><b>Metric 2 – Macro-F1</b> (0 to 1): the F1 score (balance of precision and recall) averaged over the 6 materials,
-        so the rare "trash" class counts as much as the others.</li>
-      <li>Both metrics were measured on <b>600 real-world photos the models never saw</b>. On the clean TrashNet test photos the
-        accuracy is ${["A", "B", "C"].map((k) => `${r[k].trashnet_accuracy.toFixed(1)}%`).join(" / ")} (A / B / C).</li>
-      <li><b>Runtime:</b> time this phone's processor (CPU, no GPU) needed for this photo. On a laptop CPU:
-        ${["A", "B", "C"].map((k) => `${r[k].runtime_ms_cpu.toFixed(1)}`).join(" / ")} ms.</li>
-      <li><b>Params:</b> how many numbers the model learned, in millions (0 for the classical method: HOG has nothing to learn).</li>
-      <li><b>Train time:</b> minutes to train each model on a laptop CPU. All three used the same photos and the same split.</li>
-    </ul>`;
+    <div class="swipe-hint" id="swipe-hint">swipe the table sideways to see all columns ›</div>`;
 }
 
 /** Plain-language explanation of one slot of the comparison. */
