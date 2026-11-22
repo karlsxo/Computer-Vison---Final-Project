@@ -119,12 +119,13 @@ function scan() {
         <div><button class="shutter" id="shutter" aria-label="Identify"></button><div class="ctrl-label">Identify</div></div>
         <div><button class="round" id="flip" aria-label="Switch camera">${icon("flip")}</button><div class="ctrl-label">Flip</div></div>
       </div>
-      <p class="muted small" style="text-align:center;margin:10px 0 0">One item inside the frame · plain background · good light</p>
+      <p class="muted small" style="text-align:center;margin:10px 0 0">Only the bright square is scanned · one item · good light</p>
     </div>
     <input type="file" accept="image/*" id="galleryInput" hidden>
     <input type="file" accept="image/*" capture="environment" id="cameraInput" hidden>
   </div>`;
   updateStatus();
+  layoutFrame();
   const video = document.querySelector("#video");
   document.querySelector("#gallery").onclick = () => document.querySelector("#galleryInput").click();
   document.querySelector("#galleryInput").onchange = (e) => e.target.files[0] && analyseFile(e.target.files[0]);
@@ -160,19 +161,37 @@ async function startCamera(video) {
   }
 }
 
-/** Crop the video frame to the square scanner frame shown on screen, so the
- *  item fills the picture like in the training photos. */
+/** Make the scan frame the largest square that fits between the status pill and the
+ *  button sheet, centred. Square, as before, so the AI gets an undistorted photo. */
+function layoutFrame() {
+  const scanEl = document.querySelector(".scan"), frame = document.querySelector("#frame");
+  const sheet = document.querySelector(".scan .sheet"), status = document.querySelector("#status");
+  if (!scanEl || !frame || !sheet || !status) return;
+  const box = scanEl.getBoundingClientRect();
+  const top = status.getBoundingClientRect().bottom - box.top + 12;     // below the status pill
+  const bottom = sheet.getBoundingClientRect().top - box.top - 12;      // above the buttons
+  const side = Math.max(120, Math.min(box.width - 24, bottom - top));
+  frame.style.width = `${side}px`;
+  frame.style.left = `${(box.width - side) / 2}px`;
+  frame.style.top = `${top + (bottom - top - side) / 2}px`;
+}
+window.addEventListener("resize", layoutFrame);
+
+/** Take exactly the (square) area inside the frame shown on screen from the camera
+ *  picture: what is bright on screen is what the AI sees. */
 function cropToFrame(video) {
   const vr = video.getBoundingClientRect(), fr = document.querySelector("#frame").getBoundingClientRect();
   const vw = video.videoWidth, vh = video.videoHeight;
   const s = Math.max(vr.width / vw, vr.height / vh);            // object-fit: cover
   const ox = (vr.width - vw * s) / 2, oy = (vr.height - vh * s) / 2;
   let x = (fr.left - vr.left - ox) / s, y = (fr.top - vr.top - oy) / s;
-  const side = Math.min(fr.width / s, vw, vh);
-  x = Math.max(0, Math.min(vw - side, x)); y = Math.max(0, Math.min(vh - side, y));
+  let w = fr.width / s, h = fr.height / s;
+  x = Math.max(0, x); y = Math.max(0, y);
+  w = Math.min(w, vw - x); h = Math.min(h, vh - y);
+  const scale = Math.min(1, 1280 / Math.max(w, h));            // keep the photo a sensible size
   const c = document.createElement("canvas");
-  c.width = c.height = Math.round(Math.min(side, 1024));
-  c.getContext("2d").drawImage(video, x, y, side, side, 0, 0, c.width, c.height);
+  c.width = Math.round(w * scale); c.height = Math.round(h * scale);
+  c.getContext("2d").drawImage(video, x, y, w, h, 0, 0, c.width, c.height);
   return bitmapToImageData(c);
 }
 
