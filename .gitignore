@@ -4,8 +4,12 @@ __pycache__/
 .ipynb_checkpoints/
 .venv/
 
-# Downloaded datasets (the notebook re-downloads them) and image caches
-data/raw/
+# Datasets: TrashNet (data/raw/dataset-resized/) and the web photos actually used from the
+# 12-class Garbage Classification set ARE committed (see data/README.md). The rest of the
+# 12-class download and the original zip files are not (the notebook can download them).
+data/raw/garbage12/
+data/raw/*.zip
+.DS_Store
 cache/
 
 # Node tooling for the slide generator

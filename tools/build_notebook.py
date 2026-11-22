@@ -132,7 +132,8 @@ md(r"""
 
 code(r"""
 import prepare_data
-if need(SPLIT_FILE) or need(REALWORLD_FILE):
+# the splits are fixed, committed artifacts: rebuilt only if they were deleted
+if not SPLIT_FILE.exists() or not REALWORLD_FILE.exists():
     sigs = prepare_data.build_trashnet_split()
     prepare_data.build_realworld(sigs)
 js = load_json(SPLIT_FILE)
@@ -292,7 +293,7 @@ These models are the ones used by the BIN app.
 """)
 code(r"""
 import prepare_mixed, mixed_domain
-if need(prepare_mixed.MIXED_FILE):
+if not prepare_mixed.MIXED_FILE.exists():    # fixed, committed split (rebuilt only if deleted)
     prepare_mixed.main()
 mx = load_json(prepare_mixed.MIXED_FILE)
 display(pd.DataFrame(mx["stats"]["per_class"]).T)

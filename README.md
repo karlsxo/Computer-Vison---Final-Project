@@ -105,7 +105,7 @@ results/                  JSON results, tables, logs, figures/, phone_screens/
 report/                   PDF report, slides, proposal form, contribution statement
 docs/DOCUMENTATION.md     detailed documentation of every step and decision
 tools/                    export to the phone, phone-app checks, leakage check, notebook/report/slide generators
-data/raw/                 downloaded datasets (not committed; the notebook downloads them)
+data/raw/                 the datasets used (TrashNet + the web photos used), see data/README.md
 data/own_photos/<class>/  OPTIONAL: your own phone photos; evaluated automatically
 ```
 
@@ -136,6 +136,9 @@ datasets and re-uses the committed splits and trained models; set `RETRAIN = Tru
 on the Colab GPU (about one hour).
 
 ## Datasets
+The data used by the project is **included in this repository** in [`data/`](data) (TrashNet and the
+2,495 web photos we used, about 60 MB), at the paths referenced by `splits/*.json` — see [data/README.md](data/README.md).
+
 * **TrashNet** — G. Thung and M. Yang, Stanford, 2016. <https://github.com/garythung/trashnet> (2,527 images, 6 classes).
 * **Garbage Classification (12 classes)** — Kaggle (M. Mohamed), mirrored at
   <https://huggingface.co/datasets/UdaraChamidu/Garbage-Classification-with-12-classes>; 600 images form the
