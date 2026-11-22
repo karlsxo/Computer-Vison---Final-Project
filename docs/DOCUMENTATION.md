@@ -47,7 +47,18 @@ The brief (*Computer Vision Comparison Project*) requires, and this project deli
 | Deployment: any application | Progressive Web App on GitHub Pages (installable, offline) + Gradio app; §11 |
 | Proposal form (one page) | `report/Proposal_Form.md` / `.pdf` |
 | Deliverables: executed notebook + one .py per method, data link, PDF (Intro/Methods/Experiments/Results), slides, contribution statement | §12 |
+| Learning objectives 1–5 | see §1.1 |
 | Rules: same splits for all three models; AI use disclosed | every experiment uses the same split/test sets for A, B, C; §13 and the contribution statement |
+
+### 1.1 Learning objectives — how each one is met
+
+| # | Objective (from the brief) | What we did | Evidence |
+|---|---|---|---|
+| 1 | Choose suitable methods for a vision problem and justify the choice | Image classification of trash material; one method per slot from the course menu (HOG + SVM, small CNN, MobileNetV3), chosen to differ in a way we can explain: hand-designed vs learned features, no prior knowledge vs ImageNet knowledge, 0 vs 1.13 M vs 4.2 M parameters | Proposal form; report §1–2; §4–§6 here |
+| 2 | Implement a classical method from scratch and use modern deep learning tools | HOG **and** the linear SVM written in NumPy with three sanity checks (agreement with scikit-image to 10⁻⁷); CNN written and trained in PyTorch; MobileNetV3 fine-tuned from torchvision weights | `src/hog_svm.py`, `src/scratch_cnn.py`, `src/pretrained_mobilenet.py`; §4.4 |
+| 3 | Design a fair comparison: same data, same splits, same metrics | One saved, leakage-checked split loaded by every method; one metric function; one timing protocol; same test sets in every experiment (also Experiment 6, where all three methods get the same new training data) | `splits/*.json`, `src/common.py`; §3, §7 |
+| 4 | Evaluate with the standard metrics, including speed and model size | Top-1 accuracy, macro-F1, confusion matrices, per-class P/R/F1, 95 % CIs, McNemar tests; runtime (ms, CPU), parameters (M), model size (MB), training time (min) — in the course table format in the report, the README and on BIN's result screen | `results/results_table*.md`; §9 |
+| 5 | Explain, with evidence, when and why each method succeeds or fails | Domain-shift, small-data and error analysis with Grad-CAM; e.g. HOG fails because it ignores colour/transparency (colour histogram adds +6.7 points), the scratch CNN relies on background (Grad-CAM), pretraining wins with little data (67.6 % at 10 photos/class) and real-world training data closes the domain gap (Experiment 6) | report §4; §9.2–§9.8; BIN's "What the three slots mean" |
 
 ---
 
@@ -497,7 +508,12 @@ models and the same rules**:
    button opens the phone's own camera app instead, so photos can always be taken.
 2. **Result:** the photo with the answer band, the material with its emoji and a *Recyclable* / *Residual*
    chip and the confidence; *What to do* and handling steps; *All three methods* (label, confidence bar, runtime on this phone, ★ method, the reason
-   for the default and whether the methods agree); and a large **Scan next item** button.
+   for the default and whether the methods agree); **Comparison of the three methods**, a table in the
+   exact format of the course instructions (Method · Slot · Metric 1 = top-1 accuracy % · Metric 2 =
+   macro-F1 · Runtime (ms, measured live on the phone's CPU) · Params (M) · Train time (min)), with the
+   metrics of the deployed models on the 600 real-world test photos and notes explaining every column;
+   **What the three slots mean**, a plain-language card per slot (how it works, strength, weakness); and
+   a large **Scan next item** button.
 3. **Scan history** (button at the top of the camera): thumbnails, material, sure / not sure, time; delete or clear. Stored only on the phone.
 4. **About BIN:** the logo, help articles (*How to get an accurate answer*, *How BIN works* with the
    measured accuracy of each method, *What is wish-cycling?*, *RA 9003 in one minute*), the six material

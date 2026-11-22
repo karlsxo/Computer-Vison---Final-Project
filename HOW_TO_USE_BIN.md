@@ -62,6 +62,13 @@ Other buttons on the camera screen:
 * **All three methods** — the predictions of the three computer-vision methods of the project
   (HOG + SVM, our CNN, MobileNetV3) with their confidence and the time they took on your phone.
   BIN answers with the ★ method, MobileNetV3, the most accurate on real-world photos.
+* **Comparison of the three methods** — a table in the same format as the course instructions:
+  *Method · Slot · Metric 1 (top-1 accuracy %) · Metric 2 (macro-F1) · Runtime (ms, measured on your
+  phone's CPU for this photo) · Params (millions) · Train time (min)*. The accuracy numbers were measured on
+  600 real-world photos the models never saw.
+* **What the three slots mean** — a plain-language explanation of *A. Classical* (HOG + linear SVM),
+  *B. Trained from scratch* (our 4-block CNN) and *C. Pretrained* (MobileNetV3): how each works, its
+  strength and its weakness.
 * Tap **Scan next item** to return to the camera.
 
 ## 5. What BIN can recognise

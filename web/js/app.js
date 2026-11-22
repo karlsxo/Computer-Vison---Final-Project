@@ -2,7 +2,7 @@
 // Opens straight to the camera. Everything runs on the phone: photos never leave the device.
 import { loadModels, classify, getMeta } from "./models.js";
 import { decodeImage, bitmapToImageData, thumbnail } from "./imaging.js";
-import { MATERIALS, BIN_LABEL, ARTICLES } from "./content.js";
+import { MATERIALS, BIN_LABEL, ARTICLES, SLOT_INFO } from "./content.js";
 
 const REPO = "https://github.com/karlsxo/Computer-Vison---Final-Project";
 const METHOD = {
@@ -263,8 +263,61 @@ function result() {
     <div class="card">${["A", "B", "C"].map((k) => methodRow(k, res[k], k === rec)).join("")}
       <p class="muted small" style="margin:10px 0 0">${agree ? "All three methods agree." : "The methods disagree; BIN uses the starred method."}
       ${reasonText(rec)} Times measured on this phone.</p></div>
+    <div class="section-title">Comparison of the three methods</div>
+    <div class="card cmp-card">${comparisonTable(res, rec)}</div>
+    <div class="section-title">What the three slots mean</div>
+    ${["A", "B", "C"].map((k) => slotCard(k, k === rec)).join("")}
   </main>
   <div class="cta"><button class="btn" onclick="location.hash='#/scan'">${icon("camera")}Scan next item</button></div>`;
+  const sc = document.querySelector(".table-scroll");   // show the hint only if the table does not fit
+  if (sc && sc.scrollWidth > sc.clientWidth + 2) document.querySelector("#swipe-hint").classList.add("show");
+}
+
+/** The results table in the same format as the course instructions:
+ *  Method | Slot | Metric 1 | Metric 2 | Runtime (ms) | Params (M) | Train time (min). */
+function comparisonTable(res, rec) {
+  const r = getMeta().results;
+  // short labels so all 7 columns fit on a phone; slot names exactly as in the course table
+  const SHORT = { A: ["HOG + SVM", "A. Classical"], B: ["4-block CNN", "B. From scratch"], C: ["MobileNetV3", "C. Pretrained"] };
+  const rows = ["A", "B", "C"].map((k) => `<tr class="${k === rec ? "rec" : ""}">
+      <td><b>${k === rec ? "★ " : ""}${SHORT[k][0]}</b></td>
+      <td>${SHORT[k][1]}</td>
+      <td class="num">${r[k].realworld_accuracy.toFixed(1)}</td>
+      <td class="num">${r[k].realworld_macro_f1.toFixed(3)}</td>
+      <td class="num">${res[k].ms.toFixed(0)}</td>
+      <td class="num">${r[k].params_M.toFixed(2)}</td>
+      <td class="num">${r[k].train_time_min.toFixed(1)}</td></tr>`).join("");
+  return `<div class="table-scroll"><table class="cmp">
+    <thead><tr><th>Method</th><th>Slot</th><th>Metric 1<br><small>Top-1 acc. %</small></th>
+      <th>Metric 2<br><small>Macro-F1</small></th><th>Runtime (ms)<br><small>phone CPU</small></th>
+      <th>Params (M)</th><th>Train time (min)</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>
+    <div class="swipe-hint" id="swipe-hint">swipe the table sideways to see all columns ›</div>
+    <ul class="small notes">
+      <li><b>Metric 1 – Top-1 accuracy:</b> the share of photos whose material was predicted correctly (first guess).</li>
+      <li><b>Metric 2 – Macro-F1</b> (0 to 1): the F1 score (balance of precision and recall) averaged over the 6 materials,
+        so the rare "trash" class counts as much as the others.</li>
+      <li>Both metrics were measured on <b>600 real-world photos the models never saw</b>. On the clean TrashNet test photos the
+        accuracy is ${["A", "B", "C"].map((k) => `${r[k].trashnet_accuracy.toFixed(1)}%`).join(" / ")} (A / B / C).</li>
+      <li><b>Runtime:</b> time this phone's processor (CPU, no GPU) needed for this photo. On a laptop CPU:
+        ${["A", "B", "C"].map((k) => `${r[k].runtime_ms_cpu.toFixed(1)}`).join(" / ")} ms.</li>
+      <li><b>Params:</b> how many numbers the model learned, in millions (0 for the classical method: HOG has nothing to learn).</li>
+      <li><b>Train time:</b> minutes to train each model on a laptop CPU. All three used the same photos and the same split.</li>
+    </ul>`;
+}
+
+/** Plain-language explanation of one slot of the comparison. */
+function slotCard(k, isRec) {
+  const s = SLOT_INFO[k];
+  return `<div class="card slot-card">
+    <div class="slot-head"><span class="slot-badge" style="background:${METHOD[k].color}">${k}</span>
+      <div><div class="slot">${s.slot}${isRec ? " · used for BIN's answer" : ""}</div><b>${s.name}</b></div></div>
+    <p class="small">${s.what}</p>
+    <p class="small" style="margin-bottom:2px"><b>How it works</b></p>
+    <ol class="small guide">${s.how.map((h) => `<li>${h}</li>`).join("")}</ol>
+    <p class="small"><b>Strength:</b> ${s.good}</p>
+    <p class="small" style="margin-bottom:0"><b>Weakness:</b> ${s.bad}</p>
+  </div>`;
 }
 
 function methodRow(k, r, isRec) {

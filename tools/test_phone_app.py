@@ -49,6 +49,10 @@ def main():
         pg.wait_for_url("**#/result", timeout=60000); pg.wait_for_timeout(500)
         pg.screenshot(path=str(OUT / "3_result_upload.png"), full_page=True)
         assert pg.locator("[data-pick]").count() == 0       # BIN decides the material; no manual picking
+        # comparison table in the course format (7 columns, 3 methods) + explanation of the three slots
+        assert pg.locator("table.cmp thead th").count() == 7
+        assert pg.locator("table.cmp tbody tr").count() == 3
+        assert pg.locator(".slot-card").count() == 3
         for page, name in [("#/history", "5_history"), ("#/about", "6_about"), ("#/about/a/ai", "7_how_bin_works"),
                            ("#/about/m/glass", "8_material")]:
             pg.goto(base + page); pg.wait_for_timeout(500)

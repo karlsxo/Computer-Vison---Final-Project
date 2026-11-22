@@ -107,3 +107,47 @@ waste to be segregated <b>at source</b>: in homes, schools and offices.</p>
 sorted. BIN helps with the recyclable vs. residual decision.</p>`,
   },
 ];
+
+// Plain-language explanation of the three slots of the course comparison, shown under
+// the comparison table on the result screen (course objectives 1, 2 and 5).
+export const SLOT_INFO = {
+  A: {
+    slot: "A. Classical",
+    name: "HOG + linear SVM",
+    what: "A method from before deep learning. A person decides which features to measure; the computer only learns how to weigh them.",
+    how: [
+      "The photo is turned into grayscale and shrunk to 128 × 128 pixels.",
+      "<b>HOG</b> (Histogram of Oriented Gradients) finds the edges and, in every small 8 × 8 patch, counts in which direction they point. The result is a list of 8,100 numbers that describes the outline and shape of the item.",
+      "A <b>linear SVM</b> (Support Vector Machine) learned one straight-line rule per material that separates these numbers; the material with the highest score wins.",
+      "Both HOG and the SVM were written from scratch by our group in NumPy (no library for the main step), and checked against a reference implementation.",
+    ],
+    good: "Tiny and very fast, has no learned layers (0 parameters) and every step can be explained.",
+    bad: "HOG ignores colour, shine and transparency, which is what mostly tells materials apart: a glass bottle and a plastic bottle have the same outline. It also reacts to every edge in the background. That is why it is the least accurate.",
+  },
+  B: {
+    slot: "B. Trained from scratch",
+    name: "4-block CNN",
+    what: "A small neural network that we designed and trained ourselves, starting from random numbers.",
+    how: [
+      "A CNN (Convolutional Neural Network) looks at the 128 × 128 photo through many small filters.",
+      "Our network has 4 blocks (convolution → normalisation → ReLU → pooling); each block sees a larger part of the photo, from edges and colours to textures and object parts.",
+      "Unlike HOG, the network <b>learns its own features</b>, including colour and texture, only from our trash photos (1.13 million numbers learned).",
+      "Training used augmentation (random crops, rotations, flips, colour changes), dropout and early stopping to avoid memorising the photos.",
+    ],
+    good: "Learns colour and texture by itself, so it is much better than HOG + SVM.",
+    bad: "A few thousand photos are not enough to learn good features from zero. It still mixes up look-alike materials (clear plastic and glass) and sometimes relies on the background instead of the item.",
+  },
+  C: {
+    slot: "C. Pretrained, modern",
+    name: "MobileNetV3-Large",
+    what: "A published network (Google, 2019) that first learned from 1.28 million everyday photos (ImageNet) and was then fine-tuned by us on trash photos.",
+    how: [
+      "The photo is resized to 224 × 224 pixels and normalised the same way as during its original training.",
+      "Because of its pre-training, the network already knows what shiny, transparent, printed, folded or crushed surfaces look like.",
+      "We replaced its last layer with our 6 materials and fine-tuned it on the same trash photos as the other two methods (transfer learning).",
+      "MobileNetV3 is designed for phones: efficient layers keep it small (4.2 million numbers) and fast.",
+    ],
+    good: "The most accurate in every test, even with only 10 training photos per material, and fast enough for a phone. That is why BIN uses its answer.",
+    bad: "Largest model and slowest of the three; it can still be wrong on unusual photos (several items, dark or blurry pictures), so BIN says \"Not sure\" when its confidence is low.",
+  },
+};

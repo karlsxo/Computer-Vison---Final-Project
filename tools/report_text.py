@@ -207,7 +207,9 @@ camera app when the live camera is not allowed. <b>Processing:</b> all three met
 JavaScript (a line-by-line port of our NumPy code) and the two networks as ONNX models with onnxruntime-web
 (WebAssembly); Pillow's bilinear resize is re-implemented exactly so the networks see the same pixels as in Python.
 <b>Output drawn on the input:</b> the answer (or NOT SURE) over the photo, recyclable or residual, what to do with the
-item, and every method's label, confidence and runtime on the phone. <b>Recommendation:</b> BIN answers with the method
+item, and every method's label, confidence and runtime on the phone; below it, the comparison table in the format of the
+course instructions (Method, Slot, Metric 1 = top-1 accuracy, Metric 2 = macro-F1, Runtime, Params, Train time) and a
+plain-language explanation of each slot. <b>Recommendation:</b> BIN answers with the method
 that has the best macro-F1 on real-world photos ({rec6}), explains why with the measured numbers, and says "not sure"
 below the calibrated threshold, asking for a new photo instead of guessing; scans are kept in a history on the phone. Photos
 never leave the device and the app works offline after the first visit (about 32 MB). <b>Verification:</b> the app's own

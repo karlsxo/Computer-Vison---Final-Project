@@ -108,7 +108,8 @@ def main(source="mixed"):
                                "realworld_accuracy": round(e6[k]["realworld"]["accuracy"], 1),
                                "realworld_macro_f1": round(e6[k]["realworld"]["macro_f1"], 3),
                                "runtime_ms_cpu": round(e6[k]["train"]["runtime_ms_cpu"], 1),
-                               "params_M": round(e6[k]["train"]["params_M"], 2)} for k in "ABC"}
+                               "params_M": round(e6[k]["train"]["params_M"], 2),
+                               "train_time_min": round(e6[k]["train"]["train_time_min"], 1)} for k in "ABC"}
         meta["thresholds"] = {k: e6[k]["threshold"]["threshold"] for k in "ABC"}
         meta["threshold_stats"] = {k: {"val_coverage": round(e6[k]["threshold"]["coverage"], 3),
                                        "val_accuracy": round(e6[k]["threshold"]["selective_accuracy"] or 0, 3),
@@ -123,7 +124,8 @@ def main(source="mixed"):
                                "realworld_accuracy": round(rw[k]["accuracy"], 1),
                                "realworld_macro_f1": round(rw[k]["macro_f1"], 3),
                                "runtime_ms_cpu": round(e1[k]["runtime_ms_cpu"], 1),
-                               "params_M": round(e1[k]["params_M"], 2)} for k in "ABC"}
+                               "params_M": round(e1[k]["params_M"], 2),
+                               "train_time_min": round(e1[k]["train_time_min"], 1)} for k in "ABC"}
         meta["thresholds"] = {k: 0.5 for k in "ABC"}
     # the phone sees real-world photos, so the default method is the best one on real-world photos
     meta["recommended"] = max("ABC", key=lambda k: meta["results"][k]["realworld_macro_f1"])
