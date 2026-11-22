@@ -6,9 +6,9 @@ import { MATERIALS, BIN_LABEL, ARTICLES, SLOT_INFO } from "./content.js";
 
 const REPO = "https://github.com/karlsxo/Computer-Vison---Final-Project";
 const METHOD = {
-  A: { name: "HOG + linear SVM", slot: "Classical", color: "#d1495b" },
-  B: { name: "4-block CNN", slot: "Trained from scratch", color: "#00798c" },
-  C: { name: "MobileNetV3-Large", slot: "Pretrained", color: "#30638e" },
+  A: { name: "HOG + linear SVM", slot: "Classical", color: "#80B155" },
+  B: { name: "4-block CNN", slot: "Trained from scratch", color: "#498428" },
+  C: { name: "MobileNetV3-Large", slot: "Pretrained", color: "#336A29" },
 };
 
 // ------------------------------------------------------------------ icons
@@ -106,13 +106,14 @@ function scan() {
       <p class="small" id="nocam-why"></p></div></div>
     <div class="top">
       <div class="brand">${LOGO}<b>BIN</b></div>
+      <div class="title">Scan</div>
       <div class="top-actions">
         <button class="icon-btn" onclick="location.hash='#/history'" aria-label="Scan history">${icon("history")}</button>
         <button class="icon-btn" onclick="location.hash='#/about'" aria-label="About BIN">${icon("info")}</button>
       </div>
     </div>
     <div class="status" id="status"></div>
-    <div class="frame" id="frame"><i></i><i></i><i></i><i></i></div>
+    <div class="frame" id="frame"><i></i><i></i><i></i><i></i><div class="scanline"></div></div>
     <div class="sheet">
       <div class="controls">
         <div><button class="round" id="gallery" aria-label="Choose from gallery">${icon("image")}</button><div class="ctrl-label">Gallery</div></div>
@@ -261,23 +262,30 @@ function result() {
   // or "Not sure" (retake the photo) when its confidence is below the calibrated threshold.
   const m = MATERIALS[top.label];
   const agree = new Set(["A", "B", "C"].map((k) => res[k].label)).size === 1;
+  // result card (title + bin icon, three info tiles, what to do), like the reference design
+  const threshold = getMeta().thresholds?.[rec] ?? 0.5;
   const verdict = entry.sure
-    ? `<div class="verdict"><div class="emoji">${m.emoji}</div><div>
-         <h2>${top.label}</h2><span class="chip ${m.bin}">${BIN_LABEL[m.bin]}</span>
-         <span class="muted small"> ${pct(top.confidence)} sure</span></div></div>`
-    : `<div class="verdict unsure"><div class="emoji">🤔</div><div>
-         <h2>Not sure</h2><span class="muted small">Best guess: <b>${top.label}</b> (${pct(top.confidence)})</span></div></div>
-       <p class="small" style="margin:10px 0 0">BIN is not confident enough to answer. Retake the photo: one item filling the
-       frame, a plain background and good light.</p>`;
+    ? `<div class="verdict rs-title"><h2>${top.label}</h2>
+         <span class="rs-icon ${m.bin}" title="${BIN_LABEL[m.bin]}">${m.bin === "recyclable" ? "♻️" : "🗑️"}</span></div>
+       <div class="stats3">
+         <div><span>material</span><b>${m.emoji} ${top.label}</b></div>
+         <div><span>confidence</span><b>${pct(top.confidence)}</b></div>
+         <div><span>bin</span><b>${BIN_LABEL[m.bin]}</b></div></div>
+       <div class="todo"><p><b>What to do:</b> ${m.tip}</p>
+         <ul class="small guide">${m.guide.map((g) => `<li>${g}</li>`).join("")}</ul></div>`
+    : `<div class="verdict rs-title unsure"><h2>Not sure</h2><span class="rs-icon">🤔</span></div>
+       <div class="stats3">
+         <div><span>best guess</span><b>${top.label}</b></div>
+         <div><span>confidence</span><b>${pct(top.confidence)}</b></div>
+         <div><span>needed</span><b>${pct(threshold)}</b></div></div>
+       <div class="todo"><p>BIN is not confident enough to answer. Retake the photo: one item filling the
+         bright square, a plain background and good light.</p></div>`;
   view().innerHTML = `
   ${header("Result")}
   <main class="content with-cta">
     <div class="photo"><img src="${current.photo}" alt="Your photo">
       <div class="band">${entry.sure ? top.label.toUpperCase() : "NOT SURE"}</div></div>
-    <div class="card" style="margin-top:12px">${verdict}
-      ${entry.sure ? `<p class="small" style="margin:12px 0 0"><b>What to do:</b> ${m.tip}</p>
-        <ul class="small guide">${m.guide.map((g) => `<li>${g}</li>`).join("")}</ul>` : ""}
-    </div>
+    <div class="card result-card">${verdict}</div>
     <div class="section-title">All three methods</div>
     <div class="card">${["A", "B", "C"].map((k) => methodRow(k, res[k], k === rec)).join("")}
       <p class="muted small" style="margin:10px 0 0">${agree ? "All three methods agree." : "The methods disagree; BIN uses the starred method."}
@@ -410,7 +418,7 @@ function about(r) {
     <div class="card">${ARTICLES.map((a) => `<button class="article-row" onclick="location.hash='#/about/a/${a.id}'">
       <span class="ico">${a.emoji}</span><span><b>${a.title}</b><div class="muted small">${a.summary}</div></span></button>`).join("")}</div>
     <div class="section-title">What BIN recognises</div>
-    <div class="grid2">${Object.entries(MATERIALS).map(([k, m]) => `<button class="tile" style="background:${m.color}"
+    <div class="grid2">${Object.entries(MATERIALS).map(([k, m]) => `<button class="tile"
       onclick="location.hash='#/about/m/${k}'"><span class="emoji">${m.emoji}</span><div><b>${k}</b>
       <div class="small" style="opacity:.9">${BIN_LABEL[m.bin]}</div></div></button>`).join("")}</div>
     <div class="card" style="margin-top:14px">
